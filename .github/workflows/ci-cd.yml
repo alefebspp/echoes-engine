@@ -89,7 +89,6 @@ jobs:
     permissions:
       contents: read
 
-    # só roda no merge de PR para develop ou main
     if: >
       github.event.pull_request.merged == true &&
       (github.event.pull_request.base.ref == 'develop' ||
@@ -99,21 +98,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # define staging ou production
       - name: Set environment
-        id: env
+        id: set-env
         run: |
           if [ "${{ github.event.pull_request.base.ref }}" = "develop" ]; then
-            echo "environment=staging" >> $GITHUB_OUTPUT
+            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
           else
-            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "ENVIRONMENT=production" >> $GITHUB_ENV
           fi
 
-      - name: Deploy (dynamic)
+      - name: Deploy dynamic
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --env ${{ steps.env.outputs.environment }}
-
-    environment: ${{ steps.env.outputs.environment }}
+          command: deploy --env ${{ env.ENVIRONMENT }}
