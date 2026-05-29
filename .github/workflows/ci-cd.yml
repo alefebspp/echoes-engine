@@ -90,8 +90,7 @@ jobs:
       contents: read
 
     # ✔️ Só executa no MERGE de PR
-    if: github.event_name == 'pull_request' &&
-      github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true
 
     steps:
       - name: Checkout
