@@ -33,6 +33,8 @@ export class UsersService {
   }
 
   findAll(): Promise<User[]> {
+    console.log('findAll');
+
     return this.usersRepository.find();
   }
 
