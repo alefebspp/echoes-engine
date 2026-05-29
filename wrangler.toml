@@ -1,0 +1,19 @@
+name = "echoes-engine"
+main = "worker/index.ts"
+compatibility_date = "2025-05-29"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[env.staging]
+name = "echoes-engine-staging"
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
+
+[env.production]
+name = "echoes-engine-production"
+
+[env.production.vars]
+ENVIRONMENT = "production"
