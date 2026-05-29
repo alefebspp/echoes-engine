@@ -12,6 +12,12 @@ name = "echoes-engine-staging"
 [env.staging.vars]
 ENVIRONMENT = "staging"
 
+[env.staging_preview]
+name = "echoes-engine-staging-preview"
+
+[env.staging_preview.vars]
+ENVIRONMENT = "staging_preview"
+
 [env.production]
 name = "echoes-engine-production"
 
