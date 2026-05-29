@@ -18,8 +18,8 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
-    "deploy:staging": "wrangler deploy --env staging",
-    "deploy:production": "wrangler deploy --env production"
+    "deploy:staging": "npx wrangler deploy --env staging",
+    "deploy:production": "npx wrangler deploy --env production"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -37,7 +37,6 @@
     "typeorm": "^1.0.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250508.0",
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
     "@nestjs/cli": "^11.0.0",
@@ -61,8 +60,7 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.20.0",
-    "wrangler": "^4.19.0"
+    "typescript-eslint": "^8.20.0"
   },
   "jest": {
     "moduleFileExtensions": [
