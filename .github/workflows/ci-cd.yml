@@ -81,7 +81,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy --env staging_preview
 
-  deploy:
+  dynamic-deploy:
     name: Deploy
     needs: test
     runs-on: ubuntu-latest
@@ -89,25 +89,27 @@ jobs:
     permissions:
       contents: read
 
-    # ✔️ Só executa no MERGE de PR
-    if: github.event.pull_request.merged == true
+    if: >
+      github.event.pull_request.merged == true &&
+      (github.event.pull_request.base.ref == 'develop' ||
+       github.event.pull_request.base.ref == 'main')
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy to staging
-        if: github.event.pull_request.base.ref == 'develop'
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --env staging
+      - name: Set environment
+        id: set-env
+        run: |
+          if [ "${{ github.event.pull_request.base.ref }}" = "develop" ]; then
+            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+          else
+            echo "ENVIRONMENT=production" >> $GITHUB_ENV
+          fi
 
-      - name: Deploy to production
-        if: github.event.pull_request.base.ref == 'main'
+      - name: Deploy dynamic
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --env production
+          command: deploy --env ${{ env.ENVIRONMENT }}
