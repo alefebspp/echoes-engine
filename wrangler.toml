@@ -1,4 +1,4 @@
-name = "echoes-engine"
+name = "echoes-engine-staging-preview"
 main = "worker/index.ts"
 compatibility_date = "2025-05-29"
 compatibility_flags = ["nodejs_compat"]
