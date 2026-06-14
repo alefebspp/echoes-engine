@@ -29,6 +29,7 @@ services:
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
       DB_DATABASE: echoes
+      JWT_SECRET: dev-jwt-secret
     depends_on:
       db:
         condition: service_healthy

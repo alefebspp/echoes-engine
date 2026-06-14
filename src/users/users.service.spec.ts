@@ -20,18 +20,20 @@ describe('UsersService', () => {
   let repository: jest.Mocked<Pick<Repository<User>, 'create' | 'save' | 'find' | 'findOneBy' | 'delete'>>;
 
   const createUserDto: CreateUserDto = {
-    email: 'jane@example.com',
-    password: 'password123',
     name: 'Jane',
     surname: 'Doe',
+    email: 'jane@example.com',
+    password: 'password123',
   };
 
   const user: User = {
-    id: 1,
-    email: createUserDto.email,
-    password: 'hashed-password',
+    id: '550e8400-e29b-41d4-a716-446655440000',
     name: createUserDto.name,
     surname: createUserDto.surname,
+    email: createUserDto.email,
+    password: 'hashed-password',
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
 
   beforeEach(async () => {
@@ -96,13 +98,13 @@ describe('UsersService', () => {
     it('returns a user by id', async () => {
       repository.findOneBy.mockResolvedValue(user);
 
-      await expect(service.findOne(1)).resolves.toEqual(user);
+      await expect(service.findOne(user.id)).resolves.toEqual(user);
     });
 
     it('throws when user is not found', async () => {
       repository.findOneBy.mockResolvedValue(null);
 
-      await expect(service.findOne(99)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne(user.id)).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -116,21 +118,21 @@ describe('UsersService', () => {
 
   describe('update', () => {
     it('updates and saves the user', async () => {
-      const updateUserDto: UpdateUserDto = { name: 'Janet' };
+      const updateUserDto: UpdateUserDto = { email: 'janet@example.com' };
       repository.findOneBy.mockResolvedValue(user);
-      repository.save.mockResolvedValue({ ...user, name: 'Janet' });
+      repository.save.mockResolvedValue({ ...user, email: 'janet@example.com' });
 
-      const result = await service.update(1, updateUserDto);
+      const result = await service.update(user.id, updateUserDto);
 
       expect(repository.save).toHaveBeenCalled();
-      expect(result.name).toBe('Janet');
+      expect(result.email).toBe('janet@example.com');
     });
 
     it('hashes password when provided', async () => {
       repository.findOneBy.mockResolvedValue(user);
       repository.save.mockImplementation((entity) => Promise.resolve(entity as User));
 
-      await service.update(1, { password: 'newpassword1' });
+      await service.update(user.id, { password: 'newpassword1' });
 
       expect(bcrypt.hash).toHaveBeenCalledWith('newpassword1', 10);
     });
@@ -138,10 +140,14 @@ describe('UsersService', () => {
     it('throws when email belongs to another user', async () => {
       repository.findOneBy
         .mockResolvedValueOnce(user)
-        .mockResolvedValueOnce({ ...user, id: 2, email: 'other@example.com' });
+        .mockResolvedValueOnce({
+          ...user,
+          id: '660e8400-e29b-41d4-a716-446655440001',
+          email: 'other@example.com',
+        });
 
       await expect(
-        service.update(1, { email: 'other@example.com' }),
+        service.update(user.id, { email: 'other@example.com' }),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -150,13 +156,13 @@ describe('UsersService', () => {
     it('deletes the user', async () => {
       repository.delete.mockResolvedValue({ affected: 1, raw: [] });
 
-      await expect(service.remove(1)).resolves.toBeUndefined();
+      await expect(service.remove(user.id)).resolves.toBeUndefined();
     });
 
     it('throws when user is not found', async () => {
       repository.delete.mockResolvedValue({ affected: 0, raw: [] });
 
-      await expect(service.remove(99)).rejects.toThrow(NotFoundException);
+      await expect(service.remove(user.id)).rejects.toThrow(NotFoundException);
     });
   });
 });

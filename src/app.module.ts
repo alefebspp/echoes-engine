@@ -3,6 +3,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
+import { EventSourcesModule } from './event-sources/event-sources.module';
+import { EventTagsModule } from './event-tags/event-tags.module';
+import { EventsModule } from './events/events.module';
+import { UserSettingsModule } from './user-settings/user-settings.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -23,6 +28,11 @@ import { UsersModule } from './users/users.module';
       }),
     }),
     UsersModule,
+    AuthModule,
+    EventSourcesModule,
+    EventsModule,
+    EventTagsModule,
+    UserSettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
