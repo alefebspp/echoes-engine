@@ -12,18 +12,20 @@ describe('UsersController', () => {
   >;
 
   const user: User = {
-    id: 1,
-    email: 'jane@example.com',
-    password: 'hashed',
+    id: '550e8400-e29b-41d4-a716-446655440000',
     name: 'Jane',
     surname: 'Doe',
+    email: 'jane@example.com',
+    password: 'hashed',
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
 
   const createUserDto: CreateUserDto = {
-    email: user.email,
-    password: 'password123',
     name: user.name,
     surname: user.surname,
+    email: user.email,
+    password: 'password123',
   };
 
   beforeEach(async () => {
@@ -60,25 +62,25 @@ describe('UsersController', () => {
   it('findOne delegates to UsersService', async () => {
     service.findOne.mockResolvedValue(user);
 
-    await expect(controller.findOne(1)).resolves.toEqual(user);
-    expect(service.findOne).toHaveBeenCalledWith(1);
+    await expect(controller.findOne(user.id)).resolves.toEqual(user);
+    expect(service.findOne).toHaveBeenCalledWith(user.id);
   });
 
   it('update delegates to UsersService', async () => {
-    const updateUserDto: UpdateUserDto = { name: 'Janet' };
-    service.update.mockResolvedValue({ ...user, name: 'Janet' });
+    const updateUserDto: UpdateUserDto = { email: 'janet@example.com' };
+    service.update.mockResolvedValue({ ...user, email: 'janet@example.com' });
 
-    await expect(controller.update(1, updateUserDto)).resolves.toEqual({
+    await expect(controller.update(user.id, updateUserDto)).resolves.toEqual({
       ...user,
-      name: 'Janet',
+      email: 'janet@example.com',
     });
-    expect(service.update).toHaveBeenCalledWith(1, updateUserDto);
+    expect(service.update).toHaveBeenCalledWith(user.id, updateUserDto);
   });
 
   it('remove delegates to UsersService', async () => {
     service.remove.mockResolvedValue(undefined);
 
-    await expect(controller.remove(1)).resolves.toBeUndefined();
-    expect(service.remove).toHaveBeenCalledWith(1);
+    await expect(controller.remove(user.id)).resolves.toBeUndefined();
+    expect(service.remove).toHaveBeenCalledWith(user.id);
   });
 });

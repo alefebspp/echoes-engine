@@ -12,3 +12,4 @@ process.env.DB_USERNAME = process.env.DB_USERNAME ?? 'postgres';
 process.env.DB_PASSWORD = process.env.DB_PASSWORD ?? 'postgres';
 process.env.DB_DATABASE = process.env.DB_DATABASE ?? 'echoes';
 process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test-jwt-secret';
