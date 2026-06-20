@@ -3,6 +3,8 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { Repository } from 'typeorm';
+import { EventTag } from '../src/event-tags/event-tag.entity';
+import { EventTagsService } from '../src/event-tags/event-tags.service';
 import { Event } from '../src/events/event.entity';
 import { User } from '../src/users/user.entity';
 import { createTestApp } from './create-test-app';
@@ -87,6 +89,66 @@ describe('EventsController (e2e)', () => {
         .expect(201);
 
       expect(second.body.id).toBe(first.body.id);
+
+      const eventsRepository = app.get<Repository<Event>>(
+        getRepositoryToken(Event),
+      );
+      const storedEvents = await eventsRepository.findBy({
+        userId: (
+          await eventsRepository.findOneByOrFail({ id: first.body.id })
+        ).userId,
+        externalEventId: queuedEvent.id,
+      });
+      expect(storedEvents).toHaveLength(1);
+    });
+
+    it('persists event tags atomically with the event', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/events')
+        .set('Authorization', `Bearer ${token}`)
+        .send(webVisitEvent)
+        .expect(201);
+
+      const eventTagsRepository = app.get<Repository<EventTag>>(
+        getRepositoryToken(EventTag),
+      );
+      const tags = await eventTagsRepository.findBy({
+        eventId: response.body.id,
+      });
+
+      expect(tags).toEqual([
+        expect.objectContaining({
+          eventId: response.body.id,
+          tag: 'developer tools',
+          confidence: '0.9500',
+        }),
+      ]);
+    });
+
+    it('does not persist the event when tag creation fails', async () => {
+      const eventTagsService = app.get(EventTagsService);
+      const eventsRepository = app.get<Repository<Event>>(
+        getRepositoryToken(Event),
+      );
+      const eventTagsRepository = app.get<Repository<EventTag>>(
+        getRepositoryToken(EventTag),
+      );
+
+      jest
+        .spyOn(eventTagsService, 'tagEventFromMetadata')
+        .mockRejectedValueOnce(new Error('tag persistence failed'));
+
+      await request(app.getHttpServer())
+        .post('/api/v1/events')
+        .set('Authorization', `Bearer ${token}`)
+        .send(webVisitEvent)
+        .expect(400);
+
+      const events = await eventsRepository.find();
+      const tags = await eventTagsRepository.find();
+
+      expect(events).toHaveLength(0);
+      expect(tags).toHaveLength(0);
     });
 
     it('returns 401 without a bearer token', () => {

@@ -1,9 +1,16 @@
-import { Module } from '@nestjs/common';
+import { Inject, MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AsyncLocalStorage } from 'async_hooks';
+import { randomUUID } from 'crypto';
+import { NextFunction, Request, Response } from 'express';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { AlsModule } from './common/async-context/als.module';
+import { RequestContextStore } from './common/async-context/request-context.store';
+import { LoggerModule } from './common/logging/logger.module';
 import { EventSourcesModule } from './event-sources/event-sources.module';
 import { EventTagsModule } from './event-tags/event-tags.module';
 import { EventsModule } from './events/events.module';
@@ -12,7 +19,17 @@ import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
+    AlsModule,
+    LoggerModule,
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          ttl: 60_000,
+          limit: 10,
+        },
+      ],
+    }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -37,4 +54,24 @@ import { UsersModule } from './users/users.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  constructor(
+    @Inject(AsyncLocalStorage)
+    private readonly als: AsyncLocalStorage<RequestContextStore>,
+  ) {}
+
+  configure(consumer: MiddlewareConsumer): void {
+    consumer
+      .apply((req: Request, res: Response, next: NextFunction) => {
+        const headerValue = req.headers['x-correlation-id'];
+        const correlationId =
+          typeof headerValue === 'string' && headerValue.length > 0
+            ? headerValue
+            : randomUUID();
+
+        res.setHeader('x-correlation-id', correlationId);
+        this.als.run({ correlationId }, () => next());
+      })
+      .forRoutes('*path');
+  }
+}
