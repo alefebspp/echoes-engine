@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -10,6 +11,9 @@ import { EventSource } from '../event-sources/event-source.entity';
 import { User } from '../users/user.entity';
 
 @Entity('events')
+@Index('UQ_events_user_id_external_event_id', ['userId', 'externalEventId'], {
+  unique: true,
+})
 export class Event {
   @PrimaryGeneratedColumn('uuid')
   id: string;

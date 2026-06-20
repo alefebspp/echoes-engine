@@ -100,4 +100,35 @@ describe('EventTagsService', () => {
     ).resolves.toEqual([]);
     expect(eventTagsRepository.save).not.toHaveBeenCalled();
   });
+
+  it('uses the provided entity manager when supplied', async () => {
+    const eventId = '770e8400-e29b-41d4-a716-446655440002';
+    const createdTag = {
+      id: '880e8400-e29b-41d4-a716-446655440003',
+      eventId,
+      tag: 'developer tools',
+      confidence: '0.9500',
+      createdAt: new Date(),
+    } as EventTag;
+    const managerRepository = {
+      create: jest.fn().mockReturnValue(createdTag),
+      save: jest.fn().mockResolvedValue([createdTag]),
+    };
+    const manager = {
+      getRepository: jest.fn().mockReturnValue(managerRepository),
+    };
+
+    await expect(
+      service.tagEventFromMetadata(
+        eventId,
+        { url: 'https://github.com/nestjs/nest' },
+        manager as never,
+      ),
+    ).resolves.toEqual([createdTag]);
+
+    expect(manager.getRepository).toHaveBeenCalledWith(EventTag);
+    expect(eventTagsRepository.create).not.toHaveBeenCalled();
+    expect(eventTagsRepository.save).not.toHaveBeenCalled();
+    expect(managerRepository.save).toHaveBeenCalledWith([createdTag]);
+  });
 });

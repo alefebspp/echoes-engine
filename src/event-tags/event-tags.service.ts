@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { EventTag } from './event-tag.entity';
 import { categorizeUrl } from './url-tag-categorizer';
 
@@ -14,6 +14,7 @@ export class EventTagsService {
   async tagEventFromMetadata(
     eventId: string,
     metadata: Record<string, unknown>,
+    manager?: EntityManager,
   ): Promise<EventTag[]> {
     const url = metadata.url;
     if (typeof url !== 'string' || url.length === 0) {
@@ -25,14 +26,18 @@ export class EventTagsService {
       return [];
     }
 
+    const eventTagsRepository = manager
+      ? manager.getRepository(EventTag)
+      : this.eventTagsRepository;
+
     const tags = matches.map((match) =>
-      this.eventTagsRepository.create({
+      eventTagsRepository.create({
         eventId,
         tag: match.tag,
         confidence: match.confidence.toFixed(4),
       }),
     );
 
-    return this.eventTagsRepository.save(tags);
+    return eventTagsRepository.save(tags);
   }
 }

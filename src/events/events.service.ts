@@ -4,7 +4,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
+import { AppLogger } from '../common/logging/app-logger.service';
+import { structuredLog } from '../common/logging/structured-log';
 import { EventSourcesService } from '../event-sources/event-sources.service';
 import { EventTagsService } from '../event-tags/event-tags.service';
 import { SubmitEventDto } from './dto/submit-event.dto';
@@ -20,9 +22,13 @@ export class EventsService {
   constructor(
     @InjectRepository(Event)
     private readonly eventsRepository: Repository<Event>,
+    private readonly dataSource: DataSource,
     private readonly eventSourcesService: EventSourcesService,
     private readonly eventTagsService: EventTagsService,
-  ) {}
+    private readonly logger: AppLogger,
+  ) {
+    this.logger.setContext(EventsService.name);
+  }
 
   async submit(
     userId: string,
@@ -46,20 +52,43 @@ export class EventsService {
     }
 
     try {
-      const event = this.eventsRepository.create({
-        userId,
-        sourceId: source.id,
-        eventType: submitEventDto.type,
-        occurredAt: new Date(submitEventDto.timestamp),
-        metadata: { ...submitEventDto.metadata },
-        externalEventId: submitEventDto.id ?? null,
+      this.logger.log(
+        structuredLog('event.create.started', {
+          userId,
+          eventType: submitEventDto.type,
+          source: submitEventDto.source,
+          externalEventId: submitEventDto.id ?? null,
+        }),
+      );
+
+      const saved = await this.dataSource.transaction(async (manager) => {
+        const event = manager.create(Event, {
+          userId,
+          sourceId: source.id,
+          eventType: submitEventDto.type,
+          occurredAt: new Date(submitEventDto.timestamp),
+          metadata: { ...submitEventDto.metadata },
+          externalEventId: submitEventDto.id ?? null,
+        });
+
+        const persisted = await manager.save(event);
+        await this.eventTagsService.tagEventFromMetadata(
+          persisted.id,
+          persisted.metadata,
+          manager,
+        );
+        return persisted;
       });
 
-      const saved = await this.eventsRepository.save(event);
-      await this.eventTagsService.tagEventFromMetadata(
-        saved.id,
-        saved.metadata,
+      this.logger.log(
+        structuredLog('event.create.succeeded', {
+          userId,
+          eventId: saved.id,
+          eventType: submitEventDto.type,
+          source: submitEventDto.source,
+        }),
       );
+
       return { id: saved.id, status: 'accepted' };
     } catch (error) {
       if (
@@ -74,6 +103,20 @@ export class EventsService {
           return { id: existing.id, status: 'accepted' };
         }
       }
+
+      this.logger.error(
+        structuredLog('event.create.failed', {
+          userId,
+          eventType: submitEventDto.type,
+          source: submitEventDto.source,
+          externalEventId: submitEventDto.id ?? null,
+          ...(error instanceof Error && {
+            errorName: error.name,
+            errorMessage: error.message,
+          }),
+        }),
+        error instanceof Error ? error.stack : undefined,
+      );
 
       throw new BadRequestException('Unable to store event');
     }
