@@ -16,6 +16,7 @@ async function bootstrap() {
           .map((origin) => origin.trim())
           .filter(Boolean) ?? false)
       : true,
+    credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization'],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });

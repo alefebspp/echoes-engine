@@ -108,6 +108,41 @@ describe('UsersController (e2e)', () => {
       });
     });
 
+    describe('GET /api/v1/users/me', () => {
+      it('returns the authenticated user via bearer token', () => {
+        return authenticated()
+          .get('/api/v1/users/me')
+          .expect(200)
+          .expect((res) => {
+            expect(res.body).toMatchObject({
+              id: userId,
+              name: validUser.name,
+              surname: validUser.surname,
+              email: validUser.email,
+            });
+            expect(res.body.password).toBeUndefined();
+          });
+      });
+
+      it('returns the authenticated user via cookie', async () => {
+        const agent = request.agent(app.getHttpServer());
+
+        await agent.post('/api/v1/auth/login').send(loginCredentials).expect(201);
+
+        const response = await agent.get('/api/v1/users/me').expect(200);
+
+        expect(response.body).toMatchObject({
+          id: userId,
+          email: validUser.email,
+        });
+        expect(response.body.password).toBeUndefined();
+      });
+
+      it('returns 401 when unauthenticated', () => {
+        return request(app.getHttpServer()).get('/api/v1/users/me').expect(401);
+      });
+    });
+
     describe('GET /api/v1/users/:id', () => {
       it('returns a user by id', () => {
         return authenticated()
