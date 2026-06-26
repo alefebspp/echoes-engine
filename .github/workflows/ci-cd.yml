@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI
 
 on:
   push:
@@ -9,10 +9,9 @@ on:
     branches:
       - develop
       - main
-    types: [opened, synchronize, reopened, closed]
 
 concurrency:
-  group: ci-cd-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -61,56 +60,3 @@ jobs:
           DB_PASSWORD: postgres
           DB_DATABASE: echoes
           NODE_ENV: test
-
-  deploy-staging-preview:
-    name: Deploy Staging Preview
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    environment: staging_preview
-
-    if: github.event_name == 'pull_request'
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Deploy Staging Preview to Cloudflare
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --env staging_preview
-
-  deploy-staging:
-    needs: test
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'develop'
-    environment: staging
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Deploy to staging
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --env staging
-
-  deploy-production:
-    needs: test
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
-    environment: production
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Deploy to production
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --env production
