@@ -25,7 +25,7 @@ describe('DashboardController (e2e)', () => {
 
   const webVisitEvent = {
     type: 'WEB_VISIT',
-    timestamp: '2026-06-12T15:30:00.000Z',
+    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
     source: 'browser_extension',
     metadata: {
       url: 'https://kafka.apache.org',
