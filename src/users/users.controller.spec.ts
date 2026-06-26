@@ -59,6 +59,17 @@ describe('UsersController', () => {
     expect(service.findAll).toHaveBeenCalled();
   });
 
+  it('findMe delegates to UsersService with the authenticated user id', async () => {
+    service.findOne.mockResolvedValue(user);
+
+    await expect(
+      controller.findMe({
+        user: { userId: user.id, email: user.email },
+      } as never),
+    ).resolves.toEqual(user);
+    expect(service.findOne).toHaveBeenCalledWith(user.id);
+  });
+
   it('findOne delegates to UsersService', async () => {
     service.findOne.mockResolvedValue(user);
 

@@ -13,6 +13,7 @@ import { RequestContextStore } from './common/async-context/request-context.stor
 import { LoggerModule } from './common/logging/logger.module';
 import { EventSourcesModule } from './event-sources/event-sources.module';
 import { EventTagsModule } from './event-tags/event-tags.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { EventsModule } from './events/events.module';
 import { UserSettingsModule } from './user-settings/user-settings.module';
 import { UsersModule } from './users/users.module';
@@ -52,6 +53,7 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     EventSourcesModule,
     EventsModule,
+    DashboardModule,
     EventTagsModule,
     UserSettingsModule,
   ],

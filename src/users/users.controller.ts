@@ -8,14 +8,19 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Req,
   UseInterceptors,
   UseGuards,
 } from '@nestjs/common';
+import { Request } from 'express';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './user.entity';
 import { UsersService } from './users.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+
+type AuthenticatedRequest = Request & { user: AuthenticatedUser };
 
 @Controller('users')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -31,6 +36,12 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   findAll(): Promise<User[]> {
     return this.usersService.findAll();
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  findMe(@Req() request: AuthenticatedRequest): Promise<User> {
+    return this.usersService.findOne(request.user.userId);
   }
 
   @Get(':id')
