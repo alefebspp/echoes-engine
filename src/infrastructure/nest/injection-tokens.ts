@@ -2,3 +2,4 @@ export const USER_REPOSITORY = Symbol('USER_REPOSITORY');
 export const PASSWORD_HASHER = Symbol('PASSWORD_HASHER');
 export const EVENT_REPOSITORY = Symbol('EVENT_REPOSITORY');
 export const EVENT_SOURCE_LOOKUP = Symbol('EVENT_SOURCE_LOOKUP');
+export const TOKEN_SIGNER = Symbol('TOKEN_SIGNER');

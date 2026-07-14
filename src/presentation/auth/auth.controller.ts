@@ -1,9 +1,11 @@
-import { Body, Controller, Post, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Res, UseFilters, UseGuards } from '@nestjs/common';
 import { seconds, Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { CookieOptions, Response } from 'express';
+import { LoginUseCase } from 'src/application/auth/login-use-case';
+import { DomainExceptionFilter } from 'src/infrastructure/nest/domain-exception.filter';
 import { AUTH_COOKIE_NAME, JWT_COOKIE_MAX_AGE_MS } from './auth.constants';
-import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { LoginResponseDto } from './dto/login-response.dto';
 
 function authCookieOptions(maxAge?: number): CookieOptions {
   const options: CookieOptions = {
@@ -21,8 +23,9 @@ function authCookieOptions(maxAge?: number): CookieOptions {
 }
 
 @Controller('auth')
+@UseFilters(DomainExceptionFilter)
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly loginUseCase: LoginUseCase) {}
 
   @Post('login')
   @UseGuards(ThrottlerGuard)
@@ -30,19 +33,19 @@ export class AuthController {
   async login(
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) response: Response,
-  ): Promise<{ token: string }> {
-    const { token } = await this.authService.loginWithCredentials(
-      loginDto.email,
-      loginDto.password,
-    );
+  ): Promise<LoginResponseDto> {
+    const result = await this.loginUseCase.execute({
+      email: loginDto.email,
+      password: loginDto.password,
+    });
 
     response.cookie(
       AUTH_COOKIE_NAME,
-      token,
+      result.token,
       authCookieOptions(JWT_COOKIE_MAX_AGE_MS),
     );
 
-    return { token };
+    return LoginResponseDto.fromResult(result);
   }
 
   @Post('logout')
