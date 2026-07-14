@@ -1,17 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { EventTag } from '../event-tags/event-tag.entity';
-import { EventOrmEntity } from '../infrastructure/typeorm/entities/event.entity';
-import { UserSettings } from '../user-settings/user-settings.entity';
-import { DashboardService } from './dashboard.service';
+import { EventOrmEntity } from './entities/event.entity';
+import { EventTagOrmEntity } from './entities/event-tag.entity';
+import { UserSettingsOrmEntity } from './entities/user-settings.entity';
+import { TypeOrmDashboardStatsQuery } from './dashboard-stats-query';
 
-describe('DashboardService', () => {
-  let service: DashboardService;
+describe('TypeOrmDashboardStatsQuery', () => {
+  let query: TypeOrmDashboardStatsQuery;
   let eventsRepository: jest.Mocked<Pick<Repository<EventOrmEntity>, 'query'>>;
-  let eventTagsRepository: jest.Mocked<Pick<Repository<EventTag>, 'query'>>;
+  let eventTagsRepository: jest.Mocked<
+    Pick<Repository<EventTagOrmEntity>, 'query'>
+  >;
   let userSettingsRepository: jest.Mocked<
-    Pick<Repository<UserSettings>, 'findOneBy'>
+    Pick<Repository<UserSettingsOrmEntity>, 'findOneBy'>
   >;
 
   const userId = '550e8400-e29b-41d4-a716-446655440000';
@@ -23,23 +25,23 @@ describe('DashboardService', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        DashboardService,
+        TypeOrmDashboardStatsQuery,
         {
           provide: getRepositoryToken(EventOrmEntity),
           useValue: eventsRepository,
         },
         {
-          provide: getRepositoryToken(EventTag),
+          provide: getRepositoryToken(EventTagOrmEntity),
           useValue: eventTagsRepository,
         },
         {
-          provide: getRepositoryToken(UserSettings),
+          provide: getRepositoryToken(UserSettingsOrmEntity),
           useValue: userSettingsRepository,
         },
       ],
     }).compile();
 
-    service = module.get(DashboardService);
+    query = module.get(TypeOrmDashboardStatsQuery);
     jest.clearAllMocks();
   });
 
@@ -48,7 +50,7 @@ describe('DashboardService', () => {
       userId,
       timezone: 'UTC',
       trackingEnabled: true,
-      user: {} as UserSettings['user'],
+      user: {} as UserSettingsOrmEntity['user'],
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -111,7 +113,7 @@ describe('DashboardService', () => {
       { tag: 'search', count: '3' },
     ]);
 
-    const stats = await service.getStats(userId, 30);
+    const stats = await query.getStats(userId, 30);
 
     expect(stats.timezone).toBe('UTC');
     expect(stats.periodDays).toBe(30);
@@ -155,7 +157,7 @@ describe('DashboardService', () => {
     eventsRepository.query.mockResolvedValue([]);
     eventTagsRepository.query.mockResolvedValue([]);
 
-    const stats = await service.getStats(userId);
+    const stats = await query.getStats(userId);
 
     expect(stats.timezone).toBe('UTC');
     expect(stats.summary.totalEvents).toBe(0);

@@ -1,38 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { EventTag } from '../event-tags/event-tag.entity';
-import { EventOrmEntity } from '../infrastructure/typeorm/entities/event.entity';
-import { UserSettings } from '../user-settings/user-settings.entity';
-
-export type DashboardSummary = {
-  totalEvents: number;
-  eventsToday: number;
-  eventsLast7Days: number;
-  eventsLast30Days: number;
-  activeDays: number;
-  currentStreak: number;
-  untaggedEvents: number;
-  firstTrackedAt: string | null;
-  lastTrackedAt: string | null;
-  averageEventsPerActiveDay: number;
-};
-
-export type DashboardStats = {
-  timezone: string;
-  periodDays: number;
-  summary: DashboardSummary;
-  eventsByDay: Array<{ date: string; count: number }>;
-  categoryBreakdown: Array<{ tag: string; count: number; percentage: number }>;
-  topDomains: Array<{ domain: string; count: number }>;
-  topBrowsers: Array<{ browser: string; count: number }>;
-  eventsBySource: Array<{
-    sourceCode: string;
-    sourceName: string;
-    count: number;
-  }>;
-  activityByHour: Array<{ hour: number; count: number }>;
-};
+import type {
+  DashboardStats,
+  DashboardStatsQuery,
+} from 'src/domain/ports/dashboard-stats-query';
+import { EventOrmEntity } from './entities/event.entity';
+import { EventTagOrmEntity } from './entities/event-tag.entity';
+import { UserSettingsOrmEntity } from './entities/user-settings.entity';
 
 type DateCountRow = { date: string; count: string };
 type TagCountRow = { tag: string; count: string };
@@ -44,14 +19,14 @@ type DateRow = { date: string };
 type BoundsRow = { firstTrackedAt: Date | null; lastTrackedAt: Date | null };
 
 @Injectable()
-export class DashboardService {
+export class TypeOrmDashboardStatsQuery implements DashboardStatsQuery {
   constructor(
     @InjectRepository(EventOrmEntity)
     private readonly eventsRepository: Repository<EventOrmEntity>,
-    @InjectRepository(EventTag)
-    private readonly eventTagsRepository: Repository<EventTag>,
-    @InjectRepository(UserSettings)
-    private readonly userSettingsRepository: Repository<UserSettings>,
+    @InjectRepository(EventTagOrmEntity)
+    private readonly eventTagsRepository: Repository<EventTagOrmEntity>,
+    @InjectRepository(UserSettingsOrmEntity)
+    private readonly userSettingsRepository: Repository<UserSettingsOrmEntity>,
   ) {}
 
   async getStats(userId: string, periodDays = 30): Promise<DashboardStats> {

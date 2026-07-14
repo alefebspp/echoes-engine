@@ -7,10 +7,10 @@ import {
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { UserOrmEntity } from '../infrastructure/typeorm/entities/user.entity';
+import { UserOrmEntity } from './user.entity';
 
 @Entity('user_settings')
-export class UserSettings {
+export class UserSettingsOrmEntity {
   @PrimaryColumn({ name: 'user_id', type: 'uuid' })
   userId: string;
 

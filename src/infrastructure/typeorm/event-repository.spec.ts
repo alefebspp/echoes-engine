@@ -1,16 +1,16 @@
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { Event } from 'src/domain/event/event';
 import { DuplicateExternalEventException } from 'src/domain/exceptions/duplicate-external-event-exception';
-import { EventTagsService } from 'src/event-tags/event-tags.service';
 import { EventOrmEntity } from './entities/event.entity';
 import { TypeOrmEventRepository } from './event-repository';
+import { TypeOrmEventTagger } from './event-tagger';
 
 describe('TypeOrmEventRepository', () => {
   let repository: TypeOrmEventRepository;
   let events: jest.Mocked<Pick<Repository<EventOrmEntity>, 'findOneBy'>>;
   let dataSource: jest.Mocked<Pick<DataSource, 'transaction'>>;
-  let eventTagsService: jest.Mocked<
-    Pick<EventTagsService, 'tagEventFromMetadata'>
+  let eventTagger: jest.Mocked<
+    Pick<TypeOrmEventTagger, 'tagEventFromMetadata'>
   >;
   let transactionManager: jest.Mocked<Pick<EntityManager, 'save'>>;
 
@@ -38,14 +38,14 @@ describe('TypeOrmEventRepository', () => {
         work(transactionManager as EntityManager),
       ),
     };
-    eventTagsService = {
+    eventTagger = {
       tagEventFromMetadata: jest.fn(),
     };
 
     repository = new TypeOrmEventRepository(
       events as unknown as Repository<EventOrmEntity>,
       dataSource as unknown as DataSource,
-      eventTagsService as unknown as EventTagsService,
+      eventTagger as unknown as TypeOrmEventTagger,
     );
   });
 
@@ -63,13 +63,13 @@ describe('TypeOrmEventRepository', () => {
     } as EventOrmEntity;
 
     transactionManager.save.mockResolvedValue(persisted);
-    eventTagsService.tagEventFromMetadata.mockResolvedValue([]);
+    eventTagger.tagEventFromMetadata.mockResolvedValue([]);
 
     const result = await repository.create(domainEvent);
 
     expect(dataSource.transaction).toHaveBeenCalledTimes(1);
     expect(transactionManager.save).toHaveBeenCalled();
-    expect(eventTagsService.tagEventFromMetadata).toHaveBeenCalledWith(
+    expect(eventTagger.tagEventFromMetadata).toHaveBeenCalledWith(
       persisted.id,
       persisted.metadata,
       transactionManager,
@@ -91,7 +91,7 @@ describe('TypeOrmEventRepository', () => {
     } as EventOrmEntity;
 
     transactionManager.save.mockResolvedValue(persisted);
-    eventTagsService.tagEventFromMetadata.mockRejectedValue(
+    eventTagger.tagEventFromMetadata.mockRejectedValue(
       new Error('tag persistence failed'),
     );
 

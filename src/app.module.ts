@@ -10,13 +10,10 @@ import { AppService } from './app.service';
 import { AlsModule } from './common/async-context/als.module';
 import { RequestContextStore } from './common/async-context/request-context.store';
 import { LoggerModule } from './common/logging/logger.module';
-import { DashboardModule } from './dashboard/dashboard.module';
-import { EventSourcesModule } from './event-sources/event-sources.module';
-import { EventTagsModule } from './event-tags/event-tags.module';
 import { AuthModule } from './presentation/auth/auth.module';
+import { DashboardModule } from './presentation/dashboard/dashboard.module';
 import { EventModule } from './presentation/event/event.module';
 import { UserModule } from './presentation/user/user.module';
-import { UserSettingsModule } from './user-settings/user-settings.module';
 
 @Module({
   imports: [
@@ -51,11 +48,8 @@ import { UserSettingsModule } from './user-settings/user-settings.module';
     }),
     UserModule,
     AuthModule,
-    EventSourcesModule,
     EventModule,
     DashboardModule,
-    EventTagsModule,
-    UserSettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -3,10 +3,10 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { Repository } from 'typeorm';
-import { EventTag } from '../src/event-tags/event-tag.entity';
-import { EventTagsService } from '../src/event-tags/event-tags.service';
 import { EventOrmEntity } from '../src/infrastructure/typeorm/entities/event.entity';
+import { EventTagOrmEntity } from '../src/infrastructure/typeorm/entities/event-tag.entity';
 import { UserOrmEntity } from '../src/infrastructure/typeorm/entities/user.entity';
+import { TypeOrmEventTagger } from '../src/infrastructure/typeorm/event-tagger';
 import { createTestApp } from './create-test-app';
 
 describe('EventsController (e2e)', () => {
@@ -115,8 +115,8 @@ describe('EventsController (e2e)', () => {
         .send(webVisitEvent)
         .expect(201);
 
-      const eventTagsRepository = app.get<Repository<EventTag>>(
-        getRepositoryToken(EventTag),
+      const eventTagsRepository = app.get<Repository<EventTagOrmEntity>>(
+        getRepositoryToken(EventTagOrmEntity),
       );
       const tags = await eventTagsRepository.findBy({
         eventId: response.body.id,
@@ -132,16 +132,16 @@ describe('EventsController (e2e)', () => {
     });
 
     it('does not persist the event when tag creation fails', async () => {
-      const eventTagsService = app.get(EventTagsService);
+      const eventTagger = app.get(TypeOrmEventTagger);
       const eventsRepository = app.get<Repository<EventOrmEntity>>(
         getRepositoryToken(EventOrmEntity),
       );
-      const eventTagsRepository = app.get<Repository<EventTag>>(
-        getRepositoryToken(EventTag),
+      const eventTagsRepository = app.get<Repository<EventTagOrmEntity>>(
+        getRepositoryToken(EventTagOrmEntity),
       );
 
       jest
-        .spyOn(eventTagsService, 'tagEventFromMetadata')
+        .spyOn(eventTagger, 'tagEventFromMetadata')
         .mockRejectedValueOnce(new Error('tag persistence failed'));
 
       await request(app.getHttpServer())

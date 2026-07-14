@@ -7,7 +7,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { EventSource } from 'src/event-sources/event-source.entity';
+import { EventSourceOrmEntity } from './event-source.entity';
 import { UserOrmEntity } from './user.entity';
 
 @Entity('events')
@@ -28,9 +28,9 @@ export class EventOrmEntity {
   @Column({ name: 'source_id', type: 'uuid' })
   sourceId: string;
 
-  @ManyToOne(() => EventSource)
+  @ManyToOne(() => EventSourceOrmEntity)
   @JoinColumn({ name: 'source_id' })
-  source: EventSource;
+  source: EventSourceOrmEntity;
 
   @Column({ name: 'event_type', length: 100 })
   eventType: string;

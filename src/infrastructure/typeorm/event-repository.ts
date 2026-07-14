@@ -4,9 +4,9 @@ import { DataSource, Repository } from 'typeorm';
 import { Event } from 'src/domain/event/event';
 import type { EventRepository } from 'src/domain/event/event-repository';
 import { DuplicateExternalEventException } from 'src/domain/exceptions/duplicate-external-event-exception';
-import { EventTagsService } from 'src/event-tags/event-tags.service';
 import { EventOrmEntity } from './entities/event.entity';
 import { EventMapper } from './event-mapper';
+import { TypeOrmEventTagger } from './event-tagger';
 
 @Injectable()
 export class TypeOrmEventRepository implements EventRepository {
@@ -14,7 +14,7 @@ export class TypeOrmEventRepository implements EventRepository {
     @InjectRepository(EventOrmEntity)
     private readonly events: Repository<EventOrmEntity>,
     private readonly dataSource: DataSource,
-    private readonly eventTagsService: EventTagsService,
+    private readonly eventTagger: TypeOrmEventTagger,
   ) {}
 
   async findByUserIdAndExternalEventId(
@@ -33,7 +33,7 @@ export class TypeOrmEventRepository implements EventRepository {
       const saved = await this.dataSource.transaction(async (manager) => {
         const entity = EventMapper.toOrm(event);
         const persisted = await manager.save(entity);
-        await this.eventTagsService.tagEventFromMetadata(
+        await this.eventTagger.tagEventFromMetadata(
           persisted.id,
           persisted.metadata,
           manager,

@@ -1,9 +1,9 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { EventSource } from './event-source.entity';
+import { EventSourceOrmEntity } from '../typeorm/entities/event-source.entity';
 
-const DEFAULT_EVENT_SOURCES: Pick<EventSource, 'code' | 'name'>[] = [
+const DEFAULT_EVENT_SOURCES: Pick<EventSourceOrmEntity, 'code' | 'name'>[] = [
   { code: 'browser_extension', name: 'Browser Extension' },
   { code: 'mobile_sdk', name: 'Mobile SDK' },
   { code: 'github_connector', name: 'GitHub Connector' },
@@ -12,26 +12,20 @@ const DEFAULT_EVENT_SOURCES: Pick<EventSource, 'code' | 'name'>[] = [
 ];
 
 @Injectable()
-export class EventSourcesService implements OnModuleInit {
+export class EventSourceSeeder implements OnModuleInit {
   constructor(
-    @InjectRepository(EventSource)
-    private readonly eventSourcesRepository: Repository<EventSource>,
+    @InjectRepository(EventSourceOrmEntity)
+    private readonly eventSources: Repository<EventSourceOrmEntity>,
   ) {}
 
   async onModuleInit(): Promise<void> {
     for (const source of DEFAULT_EVENT_SOURCES) {
-      const existing = await this.eventSourcesRepository.findOneBy({
+      const existing = await this.eventSources.findOneBy({
         code: source.code,
       });
       if (!existing) {
-        await this.eventSourcesRepository.save(
-          this.eventSourcesRepository.create(source),
-        );
+        await this.eventSources.save(this.eventSources.create(source));
       }
     }
-  }
-
-  findByCode(code: string): Promise<EventSource | null> {
-    return this.eventSourcesRepository.findOneBy({ code });
   }
 }

@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { EventTag } from './event-tag.entity';
-import { EventTagsService } from './event-tags.service';
+import { EventTagOrmEntity } from './entities/event-tag.entity';
+import { TypeOrmEventTagger } from './event-tagger';
 
-describe('EventTagsService', () => {
-  let service: EventTagsService;
+describe('TypeOrmEventTagger', () => {
+  let tagger: TypeOrmEventTagger;
   let eventTagsRepository: jest.Mocked<
-    Pick<Repository<EventTag>, 'create' | 'save'>
+    Pick<Repository<EventTagOrmEntity>, 'create' | 'save'>
   >;
 
   beforeEach(async () => {
@@ -18,15 +18,15 @@ describe('EventTagsService', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        EventTagsService,
+        TypeOrmEventTagger,
         {
-          provide: getRepositoryToken(EventTag),
+          provide: getRepositoryToken(EventTagOrmEntity),
           useValue: eventTagsRepository,
         },
       ],
     }).compile();
 
-    service = module.get(EventTagsService);
+    tagger = module.get(TypeOrmEventTagger);
     jest.clearAllMocks();
   });
 
@@ -38,13 +38,13 @@ describe('EventTagsService', () => {
       tag: 'social media',
       confidence: '0.9500',
       createdAt: new Date(),
-    } as EventTag;
+    } as EventTagOrmEntity;
 
     eventTagsRepository.create.mockReturnValue(createdTag);
     eventTagsRepository.save.mockResolvedValue([createdTag]);
 
     await expect(
-      service.tagEventFromMetadata(eventId, {
+      tagger.tagEventFromMetadata(eventId, {
         url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
         title: 'Video',
       }),
@@ -65,12 +65,12 @@ describe('EventTagsService', () => {
       tag: 'developer tools',
       confidence: '0.9500',
       createdAt: new Date(),
-    } as EventTag;
+    } as EventTagOrmEntity;
 
     eventTagsRepository.create.mockReturnValue(createdTag);
     eventTagsRepository.save.mockResolvedValue([createdTag]);
 
-    await service.tagEventFromMetadata(eventId, {
+    await tagger.tagEventFromMetadata(eventId, {
       url: 'https://github.com/nestjs/nest',
       title: 'NestJS',
     });
@@ -84,7 +84,7 @@ describe('EventTagsService', () => {
 
   it('returns empty array when metadata has no url', async () => {
     await expect(
-      service.tagEventFromMetadata('770e8400-e29b-41d4-a716-446655440002', {
+      tagger.tagEventFromMetadata('770e8400-e29b-41d4-a716-446655440002', {
         title: 'No URL',
       }),
     ).resolves.toEqual([]);
@@ -93,7 +93,7 @@ describe('EventTagsService', () => {
 
   it('returns empty array for unrecognized URLs', async () => {
     await expect(
-      service.tagEventFromMetadata('770e8400-e29b-41d4-a716-446655440002', {
+      tagger.tagEventFromMetadata('770e8400-e29b-41d4-a716-446655440002', {
         url: 'https://example-unknown-site.local',
         title: 'Unknown',
       }),
@@ -109,7 +109,7 @@ describe('EventTagsService', () => {
       tag: 'developer tools',
       confidence: '0.9500',
       createdAt: new Date(),
-    } as EventTag;
+    } as EventTagOrmEntity;
     const managerRepository = {
       create: jest.fn().mockReturnValue(createdTag),
       save: jest.fn().mockResolvedValue([createdTag]),
@@ -119,14 +119,14 @@ describe('EventTagsService', () => {
     };
 
     await expect(
-      service.tagEventFromMetadata(
+      tagger.tagEventFromMetadata(
         eventId,
         { url: 'https://github.com/nestjs/nest' },
         manager as never,
       ),
     ).resolves.toEqual([createdTag]);
 
-    expect(manager.getRepository).toHaveBeenCalledWith(EventTag);
+    expect(manager.getRepository).toHaveBeenCalledWith(EventTagOrmEntity);
     expect(eventTagsRepository.create).not.toHaveBeenCalled();
     expect(eventTagsRepository.save).not.toHaveBeenCalled();
     expect(managerRepository.save).toHaveBeenCalledWith([createdTag]);

@@ -6,10 +6,10 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { EventOrmEntity } from '../infrastructure/typeorm/entities/event.entity';
+import { EventOrmEntity } from './event.entity';
 
 @Entity('event_tags')
-export class EventTag {
+export class EventTagOrmEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
