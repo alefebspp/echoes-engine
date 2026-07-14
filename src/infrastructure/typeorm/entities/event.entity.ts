@@ -7,23 +7,23 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { EventSource } from '../event-sources/event-source.entity';
-import { User } from '../users/user.entity';
+import { EventSource } from 'src/event-sources/event-source.entity';
+import { UserOrmEntity } from './user.entity';
 
 @Entity('events')
 @Index('UQ_events_user_id_external_event_id', ['userId', 'externalEventId'], {
   unique: true,
 })
-export class Event {
+export class EventOrmEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ name: 'user_id', type: 'uuid' })
   userId: string;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @ManyToOne(() => UserOrmEntity, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user: UserOrmEntity;
 
   @Column({ name: 'source_id', type: 'uuid' })
   sourceId: string;
@@ -44,7 +44,12 @@ export class Event {
   @Column({ type: 'jsonb' })
   metadata: Record<string, unknown>;
 
-  @Column({ name: 'external_event_id', type: 'varchar', length: 255, nullable: true })
+  @Column({
+    name: 'external_event_id',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   externalEventId: string | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })

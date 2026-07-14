@@ -6,7 +6,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Event } from '../events/event.entity';
+import { EventOrmEntity } from '../infrastructure/typeorm/entities/event.entity';
 
 @Entity('event_tags')
 export class EventTag {
@@ -16,9 +16,9 @@ export class EventTag {
   @Column({ name: 'event_id', type: 'uuid' })
   eventId: string;
 
-  @ManyToOne(() => Event, { onDelete: 'CASCADE' })
+  @ManyToOne(() => EventOrmEntity, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'event_id' })
-  event: Event;
+  event: EventOrmEntity;
 
   @Column({ length: 100 })
   tag: string;

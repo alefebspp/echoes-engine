@@ -1,33 +1,42 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
-import * as bcrypt from 'bcrypt';
-import { User } from '../users/user.entity';
-import { UsersService } from '../users/users.service';
+import {
+  PASSWORD_HASHER,
+  USER_REPOSITORY,
+} from 'src/infrastructure/nest/injection-tokens';
+import type { PasswordHasher } from 'src/domain/ports/password-hasher';
+import { User } from 'src/domain/user/user';
+import type { UserRepository } from 'src/domain/user/user-repository';
 import { AuthService } from './auth.service';
-
-jest.mock('bcrypt', () => ({
-  compare: jest.fn(),
-}));
 
 describe('AuthService', () => {
   let service: AuthService;
-  let usersService: jest.Mocked<Pick<UsersService, 'findByEmail'>>;
+  let userRepository: jest.Mocked<Pick<UserRepository, 'findByEmail'>>;
+  let passwordHasher: jest.Mocked<Pick<PasswordHasher, 'compare'>>;
   let jwtService: jest.Mocked<Pick<JwtService, 'sign'>>;
 
-  const user: User = {
+  const user = User.reconstitute({
     id: '550e8400-e29b-41d4-a716-446655440000',
     name: 'Demo',
     surname: 'User',
     email: 'demo@echoes.local',
-    password: 'hashed-password',
+    passwordHash: 'hashed-password',
     createdAt: new Date(),
     updatedAt: new Date(),
+  });
+
+  const identity = {
+    id: user.getId().toString(),
+    email: user.getEmail().toString(),
   };
 
   beforeEach(async () => {
-    usersService = {
+    userRepository = {
       findByEmail: jest.fn(),
+    };
+    passwordHasher = {
+      compare: jest.fn(),
     };
     jwtService = {
       sign: jest.fn().mockReturnValue('signed-token'),
@@ -36,7 +45,8 @@ describe('AuthService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
-        { provide: UsersService, useValue: usersService },
+        { provide: USER_REPOSITORY, useValue: userRepository },
+        { provide: PASSWORD_HASHER, useValue: passwordHasher },
         { provide: JwtService, useValue: jwtService },
       ],
     }).compile();
@@ -47,51 +57,51 @@ describe('AuthService', () => {
 
   describe('validateUser', () => {
     it('returns the user when credentials are valid', async () => {
-      usersService.findByEmail.mockResolvedValue(user);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      userRepository.findByEmail.mockResolvedValue(user);
+      passwordHasher.compare.mockResolvedValue(true);
 
       await expect(
-        service.validateUser(user.email, 'demo1234'),
-      ).resolves.toEqual(user);
+        service.validateUser(identity.email, 'demo1234'),
+      ).resolves.toEqual(identity);
     });
 
     it('returns null when user is not found', async () => {
-      usersService.findByEmail.mockResolvedValue(null);
+      userRepository.findByEmail.mockResolvedValue(null);
 
       await expect(
-        service.validateUser(user.email, 'demo1234'),
+        service.validateUser(identity.email, 'demo1234'),
       ).resolves.toBeNull();
     });
 
     it('returns null when password is invalid', async () => {
-      usersService.findByEmail.mockResolvedValue(user);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+      userRepository.findByEmail.mockResolvedValue(user);
+      passwordHasher.compare.mockResolvedValue(false);
 
       await expect(
-        service.validateUser(user.email, 'wrong-password'),
+        service.validateUser(identity.email, 'wrong-password'),
       ).resolves.toBeNull();
     });
   });
 
   describe('loginWithCredentials', () => {
     it('returns a signed token for valid credentials', async () => {
-      usersService.findByEmail.mockResolvedValue(user);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      userRepository.findByEmail.mockResolvedValue(user);
+      passwordHasher.compare.mockResolvedValue(true);
 
       await expect(
-        service.loginWithCredentials(user.email, 'demo1234'),
+        service.loginWithCredentials(identity.email, 'demo1234'),
       ).resolves.toEqual({ token: 'signed-token' });
       expect(jwtService.sign).toHaveBeenCalledWith({
-        sub: user.id,
-        email: user.email,
+        sub: identity.id,
+        email: identity.email,
       });
     });
 
     it('throws UnauthorizedException for invalid credentials', async () => {
-      usersService.findByEmail.mockResolvedValue(null);
+      userRepository.findByEmail.mockResolvedValue(null);
 
       await expect(
-        service.loginWithCredentials(user.email, 'wrong-password'),
+        service.loginWithCredentials(identity.email, 'wrong-password'),
       ).rejects.toThrow(UnauthorizedException);
     });
   });

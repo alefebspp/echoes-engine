@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventTag } from '../event-tags/event-tag.entity';
-import { Event } from '../events/event.entity';
+import { EventOrmEntity } from '../infrastructure/typeorm/entities/event.entity';
 import { UserSettings } from '../user-settings/user-settings.entity';
 
 export type DashboardSummary = {
@@ -46,8 +46,8 @@ type BoundsRow = { firstTrackedAt: Date | null; lastTrackedAt: Date | null };
 @Injectable()
 export class DashboardService {
   constructor(
-    @InjectRepository(Event)
-    private readonly eventsRepository: Repository<Event>,
+    @InjectRepository(EventOrmEntity)
+    private readonly eventsRepository: Repository<EventOrmEntity>,
     @InjectRepository(EventTag)
     private readonly eventTagsRepository: Repository<EventTag>,
     @InjectRepository(UserSettings)

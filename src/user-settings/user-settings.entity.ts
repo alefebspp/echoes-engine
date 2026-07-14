@@ -7,16 +7,16 @@ import {
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { User } from '../users/user.entity';
+import { UserOrmEntity } from '../infrastructure/typeorm/entities/user.entity';
 
 @Entity('user_settings')
 export class UserSettings {
   @PrimaryColumn({ name: 'user_id', type: 'uuid' })
   userId: string;
 
-  @OneToOne(() => User, { onDelete: 'CASCADE' })
+  @OneToOne(() => UserOrmEntity, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user: UserOrmEntity;
 
   @Column({ length: 100, default: 'UTC' })
   timezone: string;

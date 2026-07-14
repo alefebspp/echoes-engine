@@ -14,9 +14,9 @@ import { LoggerModule } from './common/logging/logger.module';
 import { EventSourcesModule } from './event-sources/event-sources.module';
 import { EventTagsModule } from './event-tags/event-tags.module';
 import { DashboardModule } from './dashboard/dashboard.module';
-import { EventsModule } from './events/events.module';
+import { EventModule } from './presentation/event/event.module';
+import { UserModule } from './presentation/user/user.module';
 import { UserSettingsModule } from './user-settings/user-settings.module';
-import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -49,10 +49,10 @@ import { UsersModule } from './users/users.module';
             : false,
       }),
     }),
-    UsersModule,
+    UserModule,
     AuthModule,
     EventSourcesModule,
-    EventsModule,
+    EventModule,
     DashboardModule,
     EventTagsModule,
     UserSettingsModule,

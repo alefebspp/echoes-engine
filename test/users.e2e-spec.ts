@@ -3,7 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { Repository } from 'typeorm';
-import { User } from '../src/users/user.entity';
+import { UserOrmEntity } from '../src/infrastructure/typeorm/entities/user.entity';
 import { createTestApp } from './create-test-app';
 
 describe('UsersController (e2e)', () => {
@@ -26,8 +26,8 @@ describe('UsersController (e2e)', () => {
   });
 
   afterEach(async () => {
-    const usersRepository = app.get<Repository<User>>(getRepositoryToken(User));
-    await usersRepository.createQueryBuilder().delete().from(User).execute();
+    const usersRepository = app.get<Repository<UserOrmEntity>>(getRepositoryToken(UserOrmEntity));
+    await usersRepository.createQueryBuilder().delete().from(UserOrmEntity).execute();
     await app.close();
   });
 

@@ -5,8 +5,8 @@ import { App } from 'supertest/types';
 import { Repository } from 'typeorm';
 import { EventTag } from '../src/event-tags/event-tag.entity';
 import { EventTagsService } from '../src/event-tags/event-tags.service';
-import { Event } from '../src/events/event.entity';
-import { User } from '../src/users/user.entity';
+import { EventOrmEntity } from '../src/infrastructure/typeorm/entities/event.entity';
+import { UserOrmEntity } from '../src/infrastructure/typeorm/entities/user.entity';
 import { createTestApp } from './create-test-app';
 
 describe('EventsController (e2e)', () => {
@@ -46,10 +46,16 @@ describe('EventsController (e2e)', () => {
   });
 
   afterEach(async () => {
-    const eventsRepository = app.get<Repository<Event>>(getRepositoryToken(Event));
-    await eventsRepository.createQueryBuilder().delete().from(Event).execute();
-    const usersRepository = app.get<Repository<User>>(getRepositoryToken(User));
-    await usersRepository.createQueryBuilder().delete().from(User).execute();
+    const eventsRepository = app.get<Repository<EventOrmEntity>>(
+      getRepositoryToken(EventOrmEntity),
+    );
+    await eventsRepository
+      .createQueryBuilder()
+      .delete()
+      .from(EventOrmEntity)
+      .execute();
+    const usersRepository = app.get<Repository<UserOrmEntity>>(getRepositoryToken(UserOrmEntity));
+    await usersRepository.createQueryBuilder().delete().from(UserOrmEntity).execute();
     await app.close();
   });
 
@@ -90,8 +96,8 @@ describe('EventsController (e2e)', () => {
 
       expect(second.body.id).toBe(first.body.id);
 
-      const eventsRepository = app.get<Repository<Event>>(
-        getRepositoryToken(Event),
+      const eventsRepository = app.get<Repository<EventOrmEntity>>(
+        getRepositoryToken(EventOrmEntity),
       );
       const storedEvents = await eventsRepository.findBy({
         userId: (
@@ -127,8 +133,8 @@ describe('EventsController (e2e)', () => {
 
     it('does not persist the event when tag creation fails', async () => {
       const eventTagsService = app.get(EventTagsService);
-      const eventsRepository = app.get<Repository<Event>>(
-        getRepositoryToken(Event),
+      const eventsRepository = app.get<Repository<EventOrmEntity>>(
+        getRepositoryToken(EventOrmEntity),
       );
       const eventTagsRepository = app.get<Repository<EventTag>>(
         getRepositoryToken(EventTag),

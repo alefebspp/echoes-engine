@@ -3,8 +3,8 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { Repository } from 'typeorm';
-import { Event } from '../src/events/event.entity';
-import { User } from '../src/users/user.entity';
+import { EventOrmEntity } from '../src/infrastructure/typeorm/entities/event.entity';
+import { UserOrmEntity } from '../src/infrastructure/typeorm/entities/user.entity';
 import { createTestApp } from './create-test-app';
 
 describe('DashboardController (e2e)', () => {
@@ -44,10 +44,16 @@ describe('DashboardController (e2e)', () => {
   });
 
   afterEach(async () => {
-    const eventsRepository = app.get<Repository<Event>>(getRepositoryToken(Event));
-    await eventsRepository.createQueryBuilder().delete().from(Event).execute();
-    const usersRepository = app.get<Repository<User>>(getRepositoryToken(User));
-    await usersRepository.createQueryBuilder().delete().from(User).execute();
+    const eventsRepository = app.get<Repository<EventOrmEntity>>(
+      getRepositoryToken(EventOrmEntity),
+    );
+    await eventsRepository
+      .createQueryBuilder()
+      .delete()
+      .from(EventOrmEntity)
+      .execute();
+    const usersRepository = app.get<Repository<UserOrmEntity>>(getRepositoryToken(UserOrmEntity));
+    await usersRepository.createQueryBuilder().delete().from(UserOrmEntity).execute();
     await app.close();
   });
 

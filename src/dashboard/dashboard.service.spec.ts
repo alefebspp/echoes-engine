@@ -2,13 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventTag } from '../event-tags/event-tag.entity';
-import { Event } from '../events/event.entity';
+import { EventOrmEntity } from '../infrastructure/typeorm/entities/event.entity';
 import { UserSettings } from '../user-settings/user-settings.entity';
 import { DashboardService } from './dashboard.service';
 
 describe('DashboardService', () => {
   let service: DashboardService;
-  let eventsRepository: jest.Mocked<Pick<Repository<Event>, 'query'>>;
+  let eventsRepository: jest.Mocked<Pick<Repository<EventOrmEntity>, 'query'>>;
   let eventTagsRepository: jest.Mocked<Pick<Repository<EventTag>, 'query'>>;
   let userSettingsRepository: jest.Mocked<
     Pick<Repository<UserSettings>, 'findOneBy'>
@@ -25,7 +25,7 @@ describe('DashboardService', () => {
       providers: [
         DashboardService,
         {
-          provide: getRepositoryToken(Event),
+          provide: getRepositoryToken(EventOrmEntity),
           useValue: eventsRepository,
         },
         {
