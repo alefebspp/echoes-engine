@@ -13,13 +13,17 @@ import { UnableToStoreEventException } from 'src/application/event/exceptions/un
 import { UserAlreadyExistsException } from 'src/application/user/exceptions/user-already-exists-exception';
 import { UserNotFoundException } from 'src/application/user/exceptions/user-not-found-exception';
 import { InvalidEmailException } from 'src/domain/exceptions/invalid-email-exception';
+import { InvalidEventTypeException } from 'src/domain/exceptions/invalid-event-type-exception';
 import { InvalidPasswordException } from 'src/domain/exceptions/invalid-password-exception';
+import { UnsupportedEventTypeHandlerException } from 'src/domain/exceptions/unsupported-event-type-handler-exception';
 
 @Catch(
   UserAlreadyExistsException,
   UserNotFoundException,
   InvalidPasswordException,
   InvalidEmailException,
+  InvalidEventTypeException,
+  UnsupportedEventTypeHandlerException,
   EventSourceNotFoundException,
   UnableToStoreEventException,
   InvalidCredentialsException,

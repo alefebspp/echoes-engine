@@ -1,5 +1,7 @@
 import { Event } from 'src/domain/event/event';
+import { EventTag } from 'src/domain/event-tag/event-tag';
 import { EventOrmEntity } from './entities/event.entity';
+import { EventTagOrmEntity } from './entities/event-tag.entity';
 
 export class EventMapper {
   static toDomain(entity: EventOrmEntity): Event {
@@ -13,6 +15,7 @@ export class EventMapper {
       metadata: entity.metadata,
       externalEventId: entity.externalEventId,
       createdAt: entity.createdAt,
+      tags: (entity.tags ?? []).map((tag) => EventMapper.tagToDomain(tag)),
     });
   }
 
@@ -27,6 +30,27 @@ export class EventMapper {
     entity.metadata = event.getMetadata();
     entity.externalEventId = event.getExternalEventId();
     entity.createdAt = event.getCreatedAt();
+    entity.tags = event.getTags().map((tag) => EventMapper.tagToOrm(tag));
+    return entity;
+  }
+
+  private static tagToDomain(entity: EventTagOrmEntity): EventTag {
+    return EventTag.reconstitute({
+      id: entity.id,
+      tag: entity.tag,
+      confidence:
+        entity.confidence === null ? null : Number(entity.confidence),
+      createdAt: entity.createdAt,
+    });
+  }
+
+  private static tagToOrm(tag: EventTag): EventTagOrmEntity {
+    const entity = new EventTagOrmEntity();
+    entity.id = tag.getId();
+    entity.tag = tag.getTag();
+    const confidence = tag.getConfidence();
+    entity.confidence = confidence === null ? null : confidence.toFixed(4);
+    entity.createdAt = tag.getCreatedAt();
     return entity;
   }
 }

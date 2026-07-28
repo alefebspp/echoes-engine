@@ -4,6 +4,7 @@ import {
   IsISO8601,
   IsNotEmpty,
   IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   IsUUID,
@@ -24,19 +25,39 @@ class WebVisitMetadataDto {
   browser?: string;
 }
 
+class AppVisitMetadataDto {
+  @IsString()
+  @IsNotEmpty()
+  appName: string;
+
+  @IsString()
+  @IsOptional()
+  packageName?: string;
+
+  @IsString()
+  @IsOptional()
+  title?: string;
+}
+
 export class SubmitEventDto {
-  @IsIn(['WEB_VISIT'])
-  type: 'WEB_VISIT';
+  @IsIn(['WEB_VISIT', 'APP_VISIT'])
+  type: 'WEB_VISIT' | 'APP_VISIT';
 
   @IsISO8601()
   timestamp: string;
 
-  @IsIn(['browser_extension'])
-  source: 'browser_extension';
+  @IsIn(['browser_extension', 'mobile_sdk'])
+  source: 'browser_extension' | 'mobile_sdk';
 
+  @IsObject()
   @ValidateNested()
-  @Type(() => WebVisitMetadataDto)
-  metadata: WebVisitMetadataDto;
+  @Type((typeHelpOptions) => {
+    const object = typeHelpOptions?.object as SubmitEventDto | undefined;
+    return object?.type === 'APP_VISIT'
+      ? AppVisitMetadataDto
+      : WebVisitMetadataDto;
+  })
+  metadata: WebVisitMetadataDto | AppVisitMetadataDto;
 
   @IsOptional()
   @IsUUID()

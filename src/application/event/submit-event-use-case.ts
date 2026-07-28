@@ -4,6 +4,9 @@ import { structuredLog } from 'src/common/logging/structured-log';
 import { Event } from 'src/domain/event/event';
 import type { EventRepository } from 'src/domain/event/event-repository';
 import { DuplicateExternalEventException } from 'src/domain/exceptions/duplicate-external-event-exception';
+import { InvalidEventTypeException } from 'src/domain/exceptions/invalid-event-type-exception';
+import { UnsupportedEventTypeHandlerException } from 'src/domain/exceptions/unsupported-event-type-handler-exception';
+import type { EventTypeHandlerRegistry } from 'src/domain/ports/event-type-handler-registry';
 import type { EventSourceLookup } from 'src/domain/ports/event-source-lookup';
 
 export type SubmitEventResult = {
@@ -20,6 +23,7 @@ export class SubmitEventUseCase {
   constructor(
     private readonly eventRepository: EventRepository,
     private readonly eventSourceLookup: EventSourceLookup,
+    private readonly eventTypeHandlerRegistry: EventTypeHandlerRegistry,
     private readonly logger: SubmitEventLogger,
   ) {}
 
@@ -48,6 +52,8 @@ export class SubmitEventUseCase {
       }
     }
 
+    const handler = this.eventTypeHandlerRegistry.getHandler(props.type);
+
     try {
       this.logger.log(
         structuredLog('event.create.started', {
@@ -67,6 +73,8 @@ export class SubmitEventUseCase {
         externalEventId: props.id ?? null,
       });
 
+      event.assignTags(handler.suggestTags(event.getMetadata()));
+
       const saved = await this.eventRepository.create(event);
 
       this.logger.log(
@@ -80,6 +88,13 @@ export class SubmitEventUseCase {
 
       return { id: saved.getId().toString(), status: 'accepted' };
     } catch (error) {
+      if (
+        error instanceof InvalidEventTypeException ||
+        error instanceof UnsupportedEventTypeHandlerException
+      ) {
+        throw error;
+      }
+
       if (props.id && error instanceof DuplicateExternalEventException) {
         const existing =
           await this.eventRepository.findByUserIdAndExternalEventId(

@@ -1,18 +1,29 @@
+import { EventTag } from '../event-tag/event-tag';
 import { EventId } from '../value-objects/event-id';
+import { EventType } from '../value-objects/event-type';
 import { UserId } from '../value-objects/user-id';
 
 export class Event {
+  private tags: EventTag[] = [];
+  private tagsDefined = false;
+
   private constructor(
     private readonly id: EventId,
     private readonly userId: UserId,
     private readonly sourceId: string,
-    private readonly eventType: string,
+    private eventType: EventType,
     private readonly occurredAt: Date,
     private readonly receivedAt: Date,
     private readonly metadata: Record<string, unknown>,
     private readonly externalEventId: string | null,
     private readonly createdAt: Date,
-  ) {}
+    tags?: EventTag[],
+  ) {
+    if (tags) {
+      this.tags = [...tags];
+      this.tagsDefined = true;
+    }
+  }
 
   static create(props: {
     userId: string;
@@ -28,7 +39,7 @@ export class Event {
       EventId.generate(),
       UserId.from(props.userId),
       props.sourceId,
-      props.eventType,
+      EventType.create(props.eventType),
       props.occurredAt,
       now,
       { ...props.metadata },
@@ -47,17 +58,19 @@ export class Event {
     metadata: Record<string, unknown>;
     externalEventId: string | null;
     createdAt: Date;
+    tags?: EventTag[];
   }): Event {
     return new Event(
       EventId.from(props.id),
       UserId.from(props.userId),
       props.sourceId,
-      props.eventType,
+      EventType.create(props.eventType),
       props.occurredAt,
       props.receivedAt,
       { ...props.metadata },
       props.externalEventId,
       props.createdAt,
+      props.tags,
     );
   }
 
@@ -74,7 +87,11 @@ export class Event {
   }
 
   getEventType(): string {
-    return this.eventType;
+    return this.eventType.toString();
+  }
+
+  setEventType(eventType: string): void {
+    this.eventType = EventType.create(eventType);
   }
 
   getOccurredAt(): Date {
@@ -95,5 +112,22 @@ export class Event {
 
   getCreatedAt(): Date {
     return this.createdAt;
+  }
+
+  getTags(): EventTag[] {
+    return [...this.tags];
+  }
+
+  /**
+   * Accepts Enrichment suggestions once. Subsequent calls leave tags unchanged.
+   */
+  assignTags(tags: EventTag[]): EventTag[] {
+    if (this.tagsDefined) {
+      return this.getTags();
+    }
+
+    this.tags = [...tags];
+    this.tagsDefined = true;
+    return this.getTags();
   }
 }

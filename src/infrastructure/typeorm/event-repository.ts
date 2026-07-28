@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { Event } from 'src/domain/event/event';
 import type { EventRepository } from 'src/domain/event/event-repository';
+import { EventTag } from 'src/domain/event-tag/event-tag';
 import { DuplicateExternalEventException } from 'src/domain/exceptions/duplicate-external-event-exception';
 import { EventOrmEntity } from './entities/event.entity';
+import { EventTagOrmEntity } from './entities/event-tag.entity';
 import { EventMapper } from './event-mapper';
-import { TypeOrmEventTagger } from './event-tagger';
 
 @Injectable()
 export class TypeOrmEventRepository implements EventRepository {
@@ -14,16 +15,15 @@ export class TypeOrmEventRepository implements EventRepository {
     @InjectRepository(EventOrmEntity)
     private readonly events: Repository<EventOrmEntity>,
     private readonly dataSource: DataSource,
-    private readonly eventTagger: TypeOrmEventTagger,
   ) {}
 
   async findByUserIdAndExternalEventId(
     userId: string,
     externalEventId: string,
   ): Promise<Event | null> {
-    const entity = await this.events.findOneBy({
-      userId,
-      externalEventId,
+    const entity = await this.events.findOne({
+      where: { userId, externalEventId },
+      relations: { tags: true },
     });
     return entity ? EventMapper.toDomain(entity) : null;
   }
@@ -33,9 +33,9 @@ export class TypeOrmEventRepository implements EventRepository {
       const saved = await this.dataSource.transaction(async (manager) => {
         const entity = EventMapper.toOrm(event);
         const persisted = await manager.save(entity);
-        await this.eventTagger.tagEventFromMetadata(
+        persisted.tags = await this.persistTags(
           persisted.id,
-          persisted.metadata,
+          event.getTags(),
           manager,
         );
         return persisted;
@@ -48,6 +48,30 @@ export class TypeOrmEventRepository implements EventRepository {
       }
       throw error;
     }
+  }
+
+  private async persistTags(
+    eventId: string,
+    tags: EventTag[],
+    manager: EntityManager,
+  ): Promise<EventTagOrmEntity[]> {
+    if (tags.length === 0) {
+      return [];
+    }
+
+    const eventTagsRepository = manager.getRepository(EventTagOrmEntity);
+    const entities = tags.map((tag) => {
+      const confidence = tag.getConfidence();
+      return eventTagsRepository.create({
+        id: tag.getId(),
+        eventId,
+        tag: tag.getTag(),
+        confidence: confidence === null ? null : confidence.toFixed(4),
+        createdAt: tag.getCreatedAt(),
+      });
+    });
+
+    return eventTagsRepository.save(entities);
   }
 
   private isUniqueViolation(error: unknown): boolean {

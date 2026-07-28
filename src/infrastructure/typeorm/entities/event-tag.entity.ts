@@ -16,7 +16,9 @@ export class EventTagOrmEntity {
   @Column({ name: 'event_id', type: 'uuid' })
   eventId: string;
 
-  @ManyToOne(() => EventOrmEntity, { onDelete: 'CASCADE' })
+  @ManyToOne(() => EventOrmEntity, (event) => event.tags, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'event_id' })
   event: EventOrmEntity;
 

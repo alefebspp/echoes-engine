@@ -56,14 +56,33 @@ Technologies are **vehicles** for concepts. The goal is to learn the concept so 
 
 | Area | Status | Where to look |
 |------|--------|---------------|
-| User CRUD + JWT login | ✅ | `src/users/`, `src/auth/` |
-| Event ingest + idempotency | ✅ | `src/events/events.service.ts` |
-| URL rule-based tagging | ✅ | `src/event-tags/url-tag-categorizer.ts` |
-| Unit + E2E tests + CI | ✅ | `src/**/*.spec.ts`, `test/`, `.github/workflows/` |
-| DDD / Clean Architecture | ⬜ | Services call TypeORM directly |
-| Async, CQRS, IA, Graph | ⬜ | Not started |
+| User CRUD + JWT login | ✅ | `src/presentation/user/`, `src/presentation/auth/`, `src/application/user/`, `src/application/auth/` |
+| Event ingest + idempotency | ✅ | `src/application/event/submit-event-use-case.ts`, unique index migration |
+| URL + app rule-based tagging | ✅ | `src/domain/event-tag/url-tag-categorizer.ts`, `app-name-tag-categorizer.ts` |
+| Unit + E2E tests + CI | ✅ | `src/**/*.spec.ts`, `test/`, `.github/workflows/` — 🟡 CI still missing migrations-before-E2E |
+| DDD / Clean Architecture | 🟡 | Layers + use cases + ports in place; ADRs and a few ops/docs gaps remain |
+| Event type registry (`WEB_VISIT` / `APP_VISIT`) | ✅ | `src/infrastructure/event-type/`, `EventTypeHandlerRegistry` |
+| Async, CQRS, IA, Graph | ⬜ | Not started (Phase 4+) |
 
-**Architecture today:** `Controller → Service → TypeORM Entity`. One exception: `url-tag-categorizer.ts` is pure domain logic with no framework imports — the seed of Phase 3.
+**Architecture today:**
+
+```
+Controller → UseCase → Domain aggregate + ports → Infrastructure adapters (TypeORM, JWT, handlers)
+```
+
+Example ingest path:
+
+```
+EventController → SubmitEventUseCase
+  → EventSourceLookup
+  → EventTypeHandlerRegistry.getHandler(type)
+  → Event.create → handler.suggestTags → Event.assignTags
+  → EventRepository.create
+```
+
+Domain has **zero** NestJS/TypeORM imports. Pure domain references: `src/domain/event-tag/url-tag-categorizer.ts`, `src/domain/event/event.ts`, `src/domain/value-objects/`.
+
+**Phase 3 progress detail:** [phase-3-learn-and-implement.md](./phase-3-learn-and-implement.md) · [phase-3-architecture-summary.md](./phase-3-architecture-summary.md)
 
 ---
 
@@ -310,7 +329,7 @@ Move to Phase 3 when:
 - [X] Login and ingest are rate-limited; user list is not publicly accessible
 - [X] You can explain the difference between idempotency and deduplication
 
-**Code to study:** `src/events/events.service.ts`, `docs/initial-sql.md`, `src/migrations/`, `.github/workflows/ci-cd.yml`
+**Code to study:** `src/application/event/submit-event-use-case.ts`, `docs/initial-sql.md`, `src/migrations/`, `.github/workflows/ci-cd.yml`
 
 ---
 
@@ -320,45 +339,65 @@ Move to Phase 3 when:
 
 Restructure the codebase so new features (event types, connectors, analytics) can be added without modifying unrelated modules. Business rules live in the domain; frameworks live at the edges. Architectural decisions are documented for future you.
 
-Functionality delivered:
+Functionality delivered (target):
 - Bounded contexts: Identity, Ingestion, Enrichment
-- Use cases (`SubmitWebVisitUseCase`) replacing fat services
-- Rich domain model (`Event` aggregate, `Email` value object)
+- Use cases (`SubmitEventUseCase`) replacing fat services
+- Rich domain model (`Event` aggregate, `Email` / `EventType` value objects)
 - Repository interfaces in domain, TypeORM in infrastructure
 - ADR folder with decisions on monolith, idempotency, sync vs async tagging
+
+**Progress vs this codebase (updated):**
+
+| Deliverable | Status | Notes |
+|-------------|--------|-------|
+| Layered `domain/` / `application/` / `infrastructure/` / `presentation/` | ✅ | Nest modules wire adapters |
+| Use cases replace fat services | ✅ | Events, auth, users, dashboard |
+| Domain free of Nest/TypeORM | ✅ | Verified under `src/domain/` |
+| Repository ports + TypeORM adapters | ✅ | `EventRepository`, `UserRepository`, … |
+| Rich `Event` (tags + type invariant) | ✅ | `assignTags`, `EventType` VO, `event.spec.ts` |
+| Enrichment not inside ORM/Event invent rules | ✅ | Handlers + categorizers; Event only assigns tags |
+| Event type registry (`WEB_VISIT`, `APP_VISIT`) | ✅ | `EventTypeHandlerRegistry` + handlers |
+| Explicit Command (DTO → command) | ⬜ | DTO still passed into use case props |
+| `docs/adr/` (monolith, idempotency, sync tagging) | ⬜ | Decisions exist in code only |
+| CI migrations before E2E; no shared `synchronize` | ⬜ | Phase 2 ops carry-over |
+
+What to learn/implement next: [phase-3-learn-and-implement.md](./phase-3-learn-and-implement.md)
 
 ---
 
 **Engineering Problems**
 
-- Business logic is scattered across services that know about HTTP and SQL — how do you test rules without a database?
-- Adding a second event type risks breaking existing ingest — how do you extend safely?
-- Future you (or a teammate) will ask "why did we do X?" — where is that recorded?
-- Framework coupling makes swapping persistence or transport expensive — how do you invert dependencies?
+- Business logic is scattered across services that know about HTTP and SQL — how do you test rules without a database? → *Addressed for ingest: domain + use case unit tests with fakes.*
+- Adding a second event type risks breaking existing ingest — how do you extend safely? → *Addressed: `APP_VISIT` registered beside `WEB_VISIT` without editing submit orchestration.*
+- Future you (or a teammate) will ask "why did we do X?" — where is that recorded? → *Still open: write ADRs.*
+- Framework coupling makes swapping persistence or transport expensive — how do you invert dependencies? → *Addressed for persistence and type handlers; keep practicing the dependency rule.*
 
 ---
 
 **Concepts Learned**
 
-**Modular monolith**
+**Modular monolith** — 🟡 in code, ⬜ documented
 - *Explanation:* One deployable unit composed of well-bounded modules that communicate in-process. Extraction to microservices remains possible later.
 - *Why it matters here:* Echoes does not need distributed systems complexity yet. Module boundaries teach service boundaries without network overhead.
 
-**Domain-Driven Design (DDD)**
+**Domain-Driven Design (DDD)** — 🟡
 - *Explanation:* Model software around business concepts — aggregates, value objects, domain services, ubiquitous language.
-- *Why it matters here:* "Event" means something different to the extension (WEB_VISIT) vs the domain (ingested fact with invariants). DDD clarifies that vocabulary.
+- *Why it matters here:* "Event" means something different to the extension (`WEB_VISIT`) vs the domain (ingested fact with invariants). DDD clarifies that vocabulary.
+- *In repo now:* `Event`, `EventTag`, `EventType`, `Email`; deepen aggregate judgment via Vernon.
 
-**Clean Architecture / Ports and Adapters**
+**Clean Architecture / Ports and Adapters** — 🟡→✅ for ingest path
 - *Explanation:* Dependencies point inward. Domain knows nothing about NestJS, TypeORM, or HTTP. Infrastructure implements interfaces defined by inner layers.
-- *Why it matters here:* After Phase 2 pain, you feel why `EventsService` importing `Repository<Event>` makes unit testing domain rules awkward.
+- *Why it matters here:* After Phase 2 pain, you feel why a service importing `Repository<Event>` makes unit testing domain rules awkward.
+- *In repo now:* `EventRepository`, `EventSourceLookup`, `EventTypeHandlerRegistry`, password/token ports.
 
-**Architecture Decision Records (ADRs)**
+**Architecture Decision Records (ADRs)** — ⬜
 - *Explanation:* Short documents capturing context, decision, and consequences for significant technical choices.
 - *Why it matters here:* Phases 4–7 introduce Redis, pgvector, Neo4j. Without ADRs, you forget why PostgreSQL remains source of truth.
 
-**Open/Closed Principle**
+**Open/Closed Principle** — ✅ for current types
 - *Explanation:* Open for extension (new event types), closed for modification (existing ingest path unchanged).
 - *Why it matters here:* Connectors (`github_connector`, `spotify_connector`) are already seeded. The architecture must absorb them without rewriting core ingest.
+- *In repo now:* register a handler + extend `EventType` / DTO; do not add `if (type === …)` in `SubmitEventUseCase`.
 
 **Technology mapping:** NestJS modules teach modular monolith boundaries; folder structure (`domain/`, `application/`, `infrastructure/`) teaches Clean Architecture; markdown ADRs teach decision documentation — no new infrastructure required.
 
@@ -372,17 +411,17 @@ Functionality delivered:
 
 **Patterns and Practices**
 
-| Type | Pattern / practice |
-|------|-------------------|
-| Architectural | Modular monolith with bounded contexts |
-| Architectural | Clean Architecture / Hexagonal (ports & adapters) |
-| Architectural | Use case / application service layer |
-| Design | Aggregate root (`Event` owns tags) |
-| Design | Value object (`Email`, `Url`, `EventTimestamp`) |
-| Design | Repository interface + implementation split |
-| Design | Event type registry (strategy per type) |
-| Engineering | ADRs for significant decisions |
-| Engineering | Ubiquitous language in code naming |
+| Type | Pattern / practice | In repo? |
+|------|-------------------|----------|
+| Architectural | Modular monolith with bounded contexts | 🟡 modules; contexts informal |
+| Architectural | Clean Architecture / Hexagonal (ports & adapters) | ✅ ingest/auth |
+| Architectural | Use case / application service layer | ✅ |
+| Design | Aggregate root (`Event` owns tags) | ✅ |
+| Design | Value object (`Email`, `EventType`, …) | ✅ partial (`Url` optional) |
+| Design | Repository interface + implementation split | ✅ |
+| Design | Event type registry (strategy per type) | ✅ |
+| Engineering | ADRs for significant decisions | ⬜ |
+| Engineering | Ubiquitous language in code naming | 🟡 improving |
 
 ---
 
@@ -391,22 +430,22 @@ Functionality delivered:
 - Refactor a feature from anemic entities to rich domain model without breaking E2E tests
 - Define aggregate boundaries and enforce invariants inside the domain
 - Write use cases that orchestrate domain + repositories without framework imports in domain
-- Map HTTP DTOs → application commands → domain objects → persistence models explicitly
+- Map HTTP DTOs → application commands → domain objects → persistence models explicitly *(Command still optional gap)*
 - Test domain logic in isolation (no database, no HTTP)
-- Write ADRs that explain trade-offs, not just choices
-- Identify bounded contexts and module communication rules
+- Write ADRs that explain trade-offs, not just choices *(next)*
+- Identify bounded contexts and module communication rules *(practice on paper)*
 
 ---
 
 **Common Mistakes**
 
-- Anemic DDD — folders renamed to `domain/` but entities still have no behavior
-- God use case — one `SubmitEventUseCase` that does ingest, tag, embed, and notify
-- Leaking ORM into domain — `@Entity()` decorators on domain classes
+- Anemic DDD — folders renamed to `domain/` but entities still have no behavior → *watch for leftover getters-only types*
+- God use case — one `SubmitEventUseCase` that does ingest, tag, embed, and notify → *submit path stays focused*
+- Leaking ORM into domain — `@Entity()` decorators on domain classes → *avoided*
 - Over-engineering value objects for every string field
 - ADRs that document obvious choices or go stale without superseding entries
 - Creating microservices prematurely instead of enforcing module boundaries in the monolith
-- Skipping mappers — reusing HTTP DTOs as domain commands
+- Skipping mappers — reusing HTTP DTOs as domain commands → *still a mild gap*
 
 ---
 
@@ -414,14 +453,15 @@ Functionality delivered:
 
 Move to Phase 4 when:
 
-- [ ] Event submit flows through: Controller → Command → UseCase → Aggregate → Repository
-- [ ] Domain layer has zero imports from `@nestjs/*`, `typeorm`, or `express`
-- [ ] You can add a new event type by registering a handler/strategy, not editing core submit logic
+- [x] Event submit flows through: Controller → UseCase → Aggregate → Repository *(Command still optional)*
+- [x] Domain layer has zero imports from `@nestjs/*`, `typeorm`, or `express`
+- [x] You can add a new event type by registering a handler/strategy, not editing core submit logic
 - [ ] At least 3 ADRs exist (monolith choice, idempotency, sync tagging rationale)
-- [ ] Domain unit tests run without database; E2E tests still pass
-- [ ] You can draw the dependency diagram with arrows pointing inward
+- [x] Domain unit tests run without database; E2E tests still pass
+- [ ] You can draw the dependency diagram with arrows pointing inward *(learning self-check)*
+- [ ] CI runs migrations before E2E; shared/deployed envs do not rely on `synchronize: true`
 
-**Code to study:** `src/event-tags/url-tag-categorizer.ts` (pure logic model), then refactor `src/events/` as the reference implementation
+**Code to study:** `src/domain/event-tag/url-tag-categorizer.ts`, `src/domain/event/event.ts`, `src/application/event/submit-event-use-case.ts`, `src/infrastructure/event-type/`, `src/domain/ports/`
 
 ---
 
@@ -436,6 +476,10 @@ Functionality delivered:
 - Domain events (`EventIngested`) triggering handlers
 - Outbox table ensuring at-least-once delivery to queue
 - Redis-backed job queue with dead-letter handling
+
+**Progress vs this codebase:** tagging still runs inside `SubmitEventUseCase` (sync). No outbox / Redis / BullMQ / workers yet.
+
+**What to learn and implement:** [phase-4-learn-and-implement.md](./phase-4-learn-and-implement.md)
 
 ---
 
@@ -883,12 +927,12 @@ These recur in every phase. Notice how they deepen:
 
 | Phase | Study now | Build next |
 |-------|-----------|------------|
-| 1 | `src/main.ts`, `src/auth/`, `docs/mvp-endpoints.md` | Health endpoints, protect user routes |
-| 2 | `src/events/events.service.ts`, `docs/initial-sql.md` | DB unique index, transactions, migrations in CI |
-| 3 | `src/event-tags/url-tag-categorizer.ts` | `domain/`, `application/use-cases/` |
-| 4 | Phase 3 domain events (to create) | Outbox table, BullMQ worker |
+| 1 | `src/main.ts`, `src/presentation/auth/`, `docs/mvp-endpoints.md` | *(done)* Health, protect user routes |
+| 2 | `src/application/event/submit-event-use-case.ts`, `docs/initial-sql.md` | Migrations in CI; harden `synchronize` policy |
+| 3 | `src/domain/event/`, `src/infrastructure/event-type/`, `src/domain/ports/` | `docs/adr/`, optional Command, paper exercises |
+| 4 | [phase-4-learn-and-implement.md](./phase-4-learn-and-implement.md), current submit use case | Outbox table, BullMQ worker, async tagging |
 | 5 | `docs/initial-sql.md` indexes | `user_daily_stats`, query handlers |
-| 6 | Event metadata shape in `event.entity.ts` | pgvector, embedding handler, RAG endpoint |
+| 6 | Event metadata shape in ORM entity / docs | pgvector, embedding handler, RAG endpoint |
 | 7 | Tag + embedding outputs | Neo4j sync, recommendation API |
 
 ---
@@ -896,9 +940,11 @@ These recur in every phase. Notice how they deepen:
 ## Related docs
 
 - [mvp-endpoints.md](./mvp-endpoints.md) — browser extension HTTP contract
+- [api-endpoints.md](./api-endpoints.md) — full API contract (`WEB_VISIT` / `APP_VISIT` metadata)
+- [phase-4-learn-and-implement.md](./phase-4-learn-and-implement.md) — Phase 4: what to learn & implement
 - [initial-sql.md](./initial-sql.md) — target PostgreSQL schema
 - [../README.md](../README.md) — project overview
 
 ---
 
-*Last updated: June 2026*
+*Last updated: July 2026*

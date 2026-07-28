@@ -5,9 +5,11 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { EventSourceOrmEntity } from './event-source.entity';
+import { EventTagOrmEntity } from './event-tag.entity';
 import { UserOrmEntity } from './user.entity';
 
 @Entity('events')
@@ -54,4 +56,7 @@ export class EventOrmEntity {
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
+
+  @OneToMany(() => EventTagOrmEntity, (tag) => tag.event)
+  tags: EventTagOrmEntity[];
 }
