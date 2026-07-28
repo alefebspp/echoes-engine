@@ -7,16 +7,13 @@ import { randomUUID } from 'crypto';
 import { NextFunction, Request, Response } from 'express';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AuthModule } from './auth/auth.module';
 import { AlsModule } from './common/async-context/als.module';
 import { RequestContextStore } from './common/async-context/request-context.store';
 import { LoggerModule } from './common/logging/logger.module';
-import { EventSourcesModule } from './event-sources/event-sources.module';
-import { EventTagsModule } from './event-tags/event-tags.module';
-import { DashboardModule } from './dashboard/dashboard.module';
-import { EventsModule } from './events/events.module';
-import { UserSettingsModule } from './user-settings/user-settings.module';
-import { UsersModule } from './users/users.module';
+import { AuthModule } from './presentation/auth/auth.module';
+import { DashboardModule } from './presentation/dashboard/dashboard.module';
+import { EventModule } from './presentation/event/event.module';
+import { UserModule } from './presentation/user/user.module';
 
 @Module({
   imports: [
@@ -49,13 +46,10 @@ import { UsersModule } from './users/users.module';
             : false,
       }),
     }),
-    UsersModule,
+    UserModule,
     AuthModule,
-    EventSourcesModule,
-    EventsModule,
+    EventModule,
     DashboardModule,
-    EventTagsModule,
-    UserSettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

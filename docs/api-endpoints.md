@@ -134,21 +134,66 @@ Set-Cookie: access_token=; Path=/; HttpOnly; SameSite=Lax; ...
 
 ### `POST /api/v1/events`
 
-Submit a browsing event for the authenticated user.
+Submit an event for the authenticated user. Supported types: `WEB_VISIT`, `APP_VISIT`.
 
 | Parameter           | Location | Required | Type                  | Constraints                          | Description                              |
 | ------------------- | -------- | -------- | --------------------- | ------------------------------------ | ---------------------------------------- |
 | Authentication      | Header or Cookie | Yes | `string`        | Bearer token or `access_token` cookie | JWT from login (see [Authentication](#authentication)) |
-| `type`              | Body     | Yes      | `"WEB_VISIT"`         | Must be `"WEB_VISIT"`                | Event type                               |
+| `type`              | Body     | Yes      | `string`              | `"WEB_VISIT"` \| `"APP_VISIT"`       | Event type                               |
 | `timestamp`         | Body     | Yes      | `string`              | ISO-8601                             | When the event occurred                  |
-| `source`            | Body     | Yes      | `"browser_extension"` | Must be `"browser_extension"`        | Event source identifier                  |
-| `metadata`          | Body     | Yes      | `object`              | —                                    | Event-specific payload                   |
-| `metadata.url`      | Body     | Yes      | `string`              | Non-empty                            | Page URL                                 |
-| `metadata.title`    | Body     | Yes      | `string`              | Non-empty                            | Page title                               |
-| `metadata.browser`  | Body     | No       | `string`              | —                                    | Browser name (e.g. `"chrome"`)           |
+| `source`            | Body     | Yes      | `string`              | `"browser_extension"` \| `"mobile_sdk"` | Event source identifier               |
+| `metadata`          | Body     | Yes      | `object`              | Shape depends on `type` (see below)  | Event-specific payload                   |
 | `id`                | Body     | No       | `string`              | UUID                                 | Optional client idempotency key          |
 | `attempts`          | Body     | No       | `number`              | —                                    | Client retry count (ignored by backend)  |
 | `createdAt`         | Body     | No       | `string`              | ISO-8601                             | Client queue timestamp (ignored by backend) |
+
+#### Metadata by event type
+
+##### `WEB_VISIT`
+
+Typical source: `browser_extension`. Tags are derived from `metadata.url`.
+
+| Field              | Required | Type     | Constraints | Description                    |
+| ------------------ | -------- | -------- | ----------- | ------------------------------ |
+| `metadata.url`     | Yes      | `string` | Non-empty   | Page URL                       |
+| `metadata.title`   | Yes      | `string` | Non-empty   | Page title                     |
+| `metadata.browser` | No       | `string` | —           | Browser name (e.g. `"chrome"`) |
+
+```json
+{
+  "type": "WEB_VISIT",
+  "timestamp": "2026-06-12T15:30:00.000Z",
+  "source": "browser_extension",
+  "metadata": {
+    "url": "https://kafka.apache.org",
+    "title": "Apache Kafka",
+    "browser": "chrome"
+  }
+}
+```
+
+##### `APP_VISIT`
+
+Typical source: `mobile_sdk`. Tags are derived from `metadata.appName`.
+
+| Field                   | Required | Type     | Constraints | Description                                      |
+| ----------------------- | -------- | -------- | ----------- | ------------------------------------------------ |
+| `metadata.appName`      | Yes      | `string` | Non-empty   | Display name of the app (used for tag categorization) |
+| `metadata.packageName`  | No       | `string` | —           | Platform package / bundle id (e.g. `com.instagram.android`) |
+| `metadata.title`        | No       | `string` | —           | Optional screen or activity title                |
+
+```json
+{
+  "type": "APP_VISIT",
+  "timestamp": "2026-06-12T15:30:00.000Z",
+  "source": "mobile_sdk",
+  "metadata": {
+    "appName": "Instagram",
+    "packageName": "com.instagram.android",
+    "title": "Feed"
+  }
+}
+```
 
 **Response:** `201`
 

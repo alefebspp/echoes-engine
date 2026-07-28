@@ -2,11 +2,10 @@ import { INestApplication } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { Repository } from 'typeorm';
-import { EventTag } from '../src/event-tags/event-tag.entity';
-import { EventTagsService } from '../src/event-tags/event-tags.service';
-import { Event } from '../src/events/event.entity';
-import { User } from '../src/users/user.entity';
+import { DataSource, Repository } from 'typeorm';
+import { EventOrmEntity } from '../src/infrastructure/typeorm/entities/event.entity';
+import { EventTagOrmEntity } from '../src/infrastructure/typeorm/entities/event-tag.entity';
+import { UserOrmEntity } from '../src/infrastructure/typeorm/entities/user.entity';
 import { createTestApp } from './create-test-app';
 
 describe('EventsController (e2e)', () => {
@@ -46,10 +45,16 @@ describe('EventsController (e2e)', () => {
   });
 
   afterEach(async () => {
-    const eventsRepository = app.get<Repository<Event>>(getRepositoryToken(Event));
-    await eventsRepository.createQueryBuilder().delete().from(Event).execute();
-    const usersRepository = app.get<Repository<User>>(getRepositoryToken(User));
-    await usersRepository.createQueryBuilder().delete().from(User).execute();
+    const eventsRepository = app.get<Repository<EventOrmEntity>>(
+      getRepositoryToken(EventOrmEntity),
+    );
+    await eventsRepository
+      .createQueryBuilder()
+      .delete()
+      .from(EventOrmEntity)
+      .execute();
+    const usersRepository = app.get<Repository<UserOrmEntity>>(getRepositoryToken(UserOrmEntity));
+    await usersRepository.createQueryBuilder().delete().from(UserOrmEntity).execute();
     await app.close();
   });
 
@@ -90,8 +95,8 @@ describe('EventsController (e2e)', () => {
 
       expect(second.body.id).toBe(first.body.id);
 
-      const eventsRepository = app.get<Repository<Event>>(
-        getRepositoryToken(Event),
+      const eventsRepository = app.get<Repository<EventOrmEntity>>(
+        getRepositoryToken(EventOrmEntity),
       );
       const storedEvents = await eventsRepository.findBy({
         userId: (
@@ -109,8 +114,8 @@ describe('EventsController (e2e)', () => {
         .send(webVisitEvent)
         .expect(201);
 
-      const eventTagsRepository = app.get<Repository<EventTag>>(
-        getRepositoryToken(EventTag),
+      const eventTagsRepository = app.get<Repository<EventTagOrmEntity>>(
+        getRepositoryToken(EventTagOrmEntity),
       );
       const tags = await eventTagsRepository.findBy({
         eventId: response.body.id,
@@ -125,18 +130,67 @@ describe('EventsController (e2e)', () => {
       ]);
     });
 
+    it('accepts an app visit event and tags by app name', async () => {
+      const appVisitEvent = {
+        type: 'APP_VISIT',
+        timestamp: '2026-06-12T15:30:00.000Z',
+        source: 'mobile_sdk',
+        metadata: {
+          appName: 'Instagram',
+          packageName: 'com.instagram.android',
+        },
+      };
+
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/events')
+        .set('Authorization', `Bearer ${token}`)
+        .send(appVisitEvent)
+        .expect(201);
+
+      const eventTagsRepository = app.get<Repository<EventTagOrmEntity>>(
+        getRepositoryToken(EventTagOrmEntity),
+      );
+      const tags = await eventTagsRepository.findBy({
+        eventId: response.body.id,
+      });
+
+      expect(tags).toEqual([
+        expect.objectContaining({
+          eventId: response.body.id,
+          tag: 'social media',
+          confidence: '0.9500',
+        }),
+      ]);
+    });
+
     it('does not persist the event when tag creation fails', async () => {
-      const eventTagsService = app.get(EventTagsService);
-      const eventsRepository = app.get<Repository<Event>>(
-        getRepositoryToken(Event),
+      const dataSource = app.get(DataSource);
+      const eventsRepository = app.get<Repository<EventOrmEntity>>(
+        getRepositoryToken(EventOrmEntity),
       );
-      const eventTagsRepository = app.get<Repository<EventTag>>(
-        getRepositoryToken(EventTag),
+      const eventTagsRepository = app.get<Repository<EventTagOrmEntity>>(
+        getRepositoryToken(EventTagOrmEntity),
       );
+      const originalTransaction = dataSource.transaction.bind(dataSource);
 
       jest
-        .spyOn(eventTagsService, 'tagEventFromMetadata')
-        .mockRejectedValueOnce(new Error('tag persistence failed'));
+        .spyOn(dataSource, 'transaction')
+        .mockImplementation(async (work) =>
+          originalTransaction(async (manager) => {
+            const originalGetRepository = manager.getRepository.bind(manager);
+            manager.getRepository = ((target: unknown) => {
+              const repo = originalGetRepository(target as never);
+              if (target === EventTagOrmEntity) {
+                jest
+                  .spyOn(repo, 'save')
+                  .mockRejectedValueOnce(new Error('tag persistence failed'));
+              }
+              return repo;
+            }) as typeof manager.getRepository;
+
+            return work(manager);
+          }),
+        );
 
       await request(app.getHttpServer())
         .post('/api/v1/events')
