@@ -2,11 +2,37 @@ import { INestApplication } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { DataSource, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { EventOrmEntity } from '../src/infrastructure/typeorm/entities/event.entity';
 import { EventTagOrmEntity } from '../src/infrastructure/typeorm/entities/event-tag.entity';
+import { OutboxMessageOrmEntity } from '../src/infrastructure/typeorm/entities/outbox-message.entity';
 import { UserOrmEntity } from '../src/infrastructure/typeorm/entities/user.entity';
+import { OutboxPublisher } from '../src/infrastructure/queue/outbox-publisher.service';
+import { EnrichEventTagsUseCase } from '../src/application/event/enrich-event-tags-use-case';
 import { createTestApp } from './create-test-app';
+
+async function waitFor(
+  assertion: () => Promise<void>,
+  timeoutMs = 10_000,
+  intervalMs = 200,
+): Promise<void> {
+  const started = Date.now();
+  let lastError: unknown;
+
+  while (Date.now() - started < timeoutMs) {
+    try {
+      await assertion();
+      return;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('waitFor timed out');
+}
 
 describe('EventsController (e2e)', () => {
   let app: INestApplication<App>;
@@ -53,8 +79,22 @@ describe('EventsController (e2e)', () => {
       .delete()
       .from(EventOrmEntity)
       .execute();
-    const usersRepository = app.get<Repository<UserOrmEntity>>(getRepositoryToken(UserOrmEntity));
-    await usersRepository.createQueryBuilder().delete().from(UserOrmEntity).execute();
+    const outboxRepository = app.get<Repository<OutboxMessageOrmEntity>>(
+      getRepositoryToken(OutboxMessageOrmEntity),
+    );
+    await outboxRepository
+      .createQueryBuilder()
+      .delete()
+      .from(OutboxMessageOrmEntity)
+      .execute();
+    const usersRepository = app.get<Repository<UserOrmEntity>>(
+      getRepositoryToken(UserOrmEntity),
+    );
+    await usersRepository
+      .createQueryBuilder()
+      .delete()
+      .from(UserOrmEntity)
+      .execute();
     await app.close();
   });
 
@@ -107,30 +147,92 @@ describe('EventsController (e2e)', () => {
       expect(storedEvents).toHaveLength(1);
     });
 
-    it('persists event tags atomically with the event', async () => {
+    it('writes an outbox row and enriches tags asynchronously', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/events')
+        .set('Authorization', `Bearer ${token}`)
+        .set('x-correlation-id', 'e2e-corr-1')
+        .send(webVisitEvent)
+        .expect(201);
+
+      const eventId = response.body.id as string;
+      const eventsRepository = app.get<Repository<EventOrmEntity>>(
+        getRepositoryToken(EventOrmEntity),
+      );
+      const outboxRepository = app.get<Repository<OutboxMessageOrmEntity>>(
+        getRepositoryToken(OutboxMessageOrmEntity),
+      );
+      const eventTagsRepository = app.get<Repository<EventTagOrmEntity>>(
+        getRepositoryToken(EventTagOrmEntity),
+      );
+
+      const storedEvent = await eventsRepository.findOneByOrFail({
+        id: eventId,
+      });
+      expect(storedEvent.tagsAssigned).toBe(false);
+
+      const outboxRows = await outboxRepository.find();
+      expect(outboxRows).toEqual([
+        expect.objectContaining({
+          type: 'EventIngested',
+          publishedAt: null,
+          payload: expect.objectContaining({
+            eventId,
+            eventType: 'WEB_VISIT',
+            correlationId: 'e2e-corr-1',
+          }),
+        }),
+      ]);
+
+      expect(
+        await eventTagsRepository.findBy({ eventId }),
+      ).toHaveLength(0);
+
+      const publisher = app.get(OutboxPublisher);
+      await publisher.publishPending();
+
+      await waitFor(async () => {
+        const tags = await eventTagsRepository.findBy({ eventId });
+        expect(tags).toEqual([
+          expect.objectContaining({
+            eventId,
+            tag: 'developer tools',
+            confidence: '0.9500',
+          }),
+        ]);
+      });
+
+      const enrichedEvent = await eventsRepository.findOneByOrFail({
+        id: eventId,
+      });
+      expect(enrichedEvent.tagsAssigned).toBe(true);
+
+      const publishedOutbox = await outboxRepository.find();
+      expect(publishedOutbox[0].publishedAt).not.toBeNull();
+    });
+
+    it('does not duplicate tags when enrichment runs twice', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/v1/events')
         .set('Authorization', `Bearer ${token}`)
         .send(webVisitEvent)
         .expect(201);
 
+      const eventId = response.body.id as string;
+      const enrichUseCase = app.get(EnrichEventTagsUseCase);
       const eventTagsRepository = app.get<Repository<EventTagOrmEntity>>(
         getRepositoryToken(EventTagOrmEntity),
       );
-      const tags = await eventTagsRepository.findBy({
-        eventId: response.body.id,
-      });
 
-      expect(tags).toEqual([
-        expect.objectContaining({
-          eventId: response.body.id,
-          tag: 'developer tools',
-          confidence: '0.9500',
-        }),
-      ]);
+      await enrichUseCase.execute(eventId);
+      await enrichUseCase.execute(eventId);
+
+      const tags = await eventTagsRepository.findBy({ eventId });
+      expect(tags).toHaveLength(1);
+      expect(tags[0].tag).toBe('developer tools');
     });
 
-    it('accepts an app visit event and tags by app name', async () => {
+    it('accepts an app visit event and tags by app name asynchronously', async () => {
       const appVisitEvent = {
         type: 'APP_VISIT',
         timestamp: '2026-06-12T15:30:00.000Z',
@@ -147,62 +249,24 @@ describe('EventsController (e2e)', () => {
         .send(appVisitEvent)
         .expect(201);
 
+      const eventId = response.body.id as string;
+      const publisher = app.get(OutboxPublisher);
+      await publisher.publishPending();
+
       const eventTagsRepository = app.get<Repository<EventTagOrmEntity>>(
         getRepositoryToken(EventTagOrmEntity),
       );
-      const tags = await eventTagsRepository.findBy({
-        eventId: response.body.id,
-      });
 
-      expect(tags).toEqual([
-        expect.objectContaining({
-          eventId: response.body.id,
-          tag: 'social media',
-          confidence: '0.9500',
-        }),
-      ]);
-    });
-
-    it('does not persist the event when tag creation fails', async () => {
-      const dataSource = app.get(DataSource);
-      const eventsRepository = app.get<Repository<EventOrmEntity>>(
-        getRepositoryToken(EventOrmEntity),
-      );
-      const eventTagsRepository = app.get<Repository<EventTagOrmEntity>>(
-        getRepositoryToken(EventTagOrmEntity),
-      );
-      const originalTransaction = dataSource.transaction.bind(dataSource);
-
-      jest
-        .spyOn(dataSource, 'transaction')
-        .mockImplementation(async (work) =>
-          originalTransaction(async (manager) => {
-            const originalGetRepository = manager.getRepository.bind(manager);
-            manager.getRepository = ((target: unknown) => {
-              const repo = originalGetRepository(target as never);
-              if (target === EventTagOrmEntity) {
-                jest
-                  .spyOn(repo, 'save')
-                  .mockRejectedValueOnce(new Error('tag persistence failed'));
-              }
-              return repo;
-            }) as typeof manager.getRepository;
-
-            return work(manager);
+      await waitFor(async () => {
+        const tags = await eventTagsRepository.findBy({ eventId });
+        expect(tags).toEqual([
+          expect.objectContaining({
+            eventId,
+            tag: 'social media',
+            confidence: '0.9500',
           }),
-        );
-
-      await request(app.getHttpServer())
-        .post('/api/v1/events')
-        .set('Authorization', `Bearer ${token}`)
-        .send(webVisitEvent)
-        .expect(400);
-
-      const events = await eventsRepository.find();
-      const tags = await eventTagsRepository.find();
-
-      expect(events).toHaveLength(0);
-      expect(tags).toHaveLength(0);
+        ]);
+      });
     });
 
     it('returns 401 without a bearer token', () => {

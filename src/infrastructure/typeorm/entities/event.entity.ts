@@ -57,6 +57,9 @@ export class EventOrmEntity {
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
+  @Column({ name: 'tags_assigned', type: 'boolean', default: false })
+  tagsAssigned: boolean;
+
   @OneToMany(() => EventTagOrmEntity, (tag) => tag.event)
   tags: EventTagOrmEntity[];
 }

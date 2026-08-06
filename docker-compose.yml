@@ -16,6 +16,17 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   api:
     build: .
     restart: unless-stopped
@@ -30,8 +41,12 @@ services:
       DB_PASSWORD: postgres
       DB_DATABASE: echoes
       JWT_SECRET: dev-jwt-secret
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
 volumes:

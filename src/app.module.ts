@@ -14,6 +14,7 @@ import { AuthModule } from './presentation/auth/auth.module';
 import { DashboardModule } from './presentation/dashboard/dashboard.module';
 import { EventModule } from './presentation/event/event.module';
 import { UserModule } from './presentation/user/user.module';
+import { EnrichmentQueueModule } from './infrastructure/queue/enrichment-queue.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { UserModule } from './presentation/user/user.module';
     UserModule,
     AuthModule,
     EventModule,
+    EnrichmentQueueModule,
     DashboardModule,
   ],
   controllers: [AppController],

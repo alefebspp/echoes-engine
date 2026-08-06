@@ -62,7 +62,7 @@ Technologies are **vehicles** for concepts. The goal is to learn the concept so 
 | Unit + E2E tests + CI | ✅ | `src/**/*.spec.ts`, `test/`, `.github/workflows/` — 🟡 CI still missing migrations-before-E2E |
 | DDD / Clean Architecture | 🟡 | Layers + use cases + ports in place; ADRs and a few ops/docs gaps remain |
 | Event type registry (`WEB_VISIT` / `APP_VISIT`) | ✅ | `src/infrastructure/event-type/`, `EventTypeHandlerRegistry` |
-| Async, CQRS, IA, Graph | ⬜ | Not started (Phase 4+) |
+| Async, CQRS, IA, Graph | 🟡 | Phase 4 async/outbox/BullMQ done; CQRS+ later phases not started |
 
 **Architecture today:**
 
@@ -477,7 +477,7 @@ Functionality delivered:
 - Outbox table ensuring at-least-once delivery to queue
 - Redis-backed job queue with dead-letter handling
 
-**Progress vs this codebase:** tagging still runs inside `SubmitEventUseCase` (sync). No outbox / Redis / BullMQ / workers yet.
+**Progress vs this codebase:** tagging runs async via outbox → BullMQ → enrichment worker. See [phase-4-concepts.md](./phase-4-concepts.md) and [ADR 0004](./adr/0004-async-tagging-outbox.md).
 
 **What to learn and implement:** [phase-4-learn-and-implement.md](./phase-4-learn-and-implement.md)
 
@@ -567,12 +567,12 @@ Functionality delivered:
 
 Move to Phase 5 when:
 
-- [ ] Ingest responds without waiting for tagging to complete
-- [ ] Outbox + worker pipeline survives broker restart (messages not lost)
-- [ ] Handlers are idempotent — duplicate jobs do not duplicate side effects
-- [ ] You can explain at-least-once vs exactly-once and why exactly-once is hard
-- [ ] Queue depth and consumer failures are visible in logs or metrics
-- [ ] E2E test covers: ingest → outbox → worker → tag created
+- [x] Ingest responds without waiting for tagging to complete
+- [x] Outbox + worker pipeline survives broker restart (messages not lost)
+- [x] Handlers are idempotent — duplicate jobs do not duplicate side effects
+- [x] You can explain at-least-once vs exactly-once and why exactly-once is hard
+- [x] Queue depth and consumer failures are visible in logs or metrics
+- [x] E2E test covers: ingest → outbox → worker → tag created
 
 ---
 
@@ -942,9 +942,11 @@ These recur in every phase. Notice how they deepen:
 - [mvp-endpoints.md](./mvp-endpoints.md) — browser extension HTTP contract
 - [api-endpoints.md](./api-endpoints.md) — full API contract (`WEB_VISIT` / `APP_VISIT` metadata)
 - [phase-4-learn-and-implement.md](./phase-4-learn-and-implement.md) — Phase 4: what to learn & implement
+- [phase-4-concepts.md](./phase-4-concepts.md) — Phase 4 concepts explained with code examples
+- [adr/0004-async-tagging-outbox.md](./adr/0004-async-tagging-outbox.md) — async tagging + outbox decision
 - [initial-sql.md](./initial-sql.md) — target PostgreSQL schema
 - [../README.md](../README.md) — project overview
 
 ---
 
-*Last updated: July 2026*
+*Last updated: August 2026*
