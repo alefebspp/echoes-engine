@@ -17,12 +17,11 @@ export class Event {
     private readonly metadata: Record<string, unknown>,
     private readonly externalEventId: string | null,
     private readonly createdAt: Date,
-    tags?: EventTag[],
+    tags: EventTag[] | undefined,
+    tagsAssigned: boolean,
   ) {
-    if (tags) {
-      this.tags = [...tags];
-      this.tagsDefined = true;
-    }
+    this.tags = tags ? [...tags] : [];
+    this.tagsDefined = tagsAssigned;
   }
 
   static create(props: {
@@ -45,6 +44,8 @@ export class Event {
       { ...props.metadata },
       props.externalEventId ?? null,
       now,
+      undefined,
+      false,
     );
   }
 
@@ -59,6 +60,7 @@ export class Event {
     externalEventId: string | null;
     createdAt: Date;
     tags?: EventTag[];
+    tagsAssigned?: boolean;
   }): Event {
     return new Event(
       EventId.from(props.id),
@@ -71,6 +73,7 @@ export class Event {
       props.externalEventId,
       props.createdAt,
       props.tags,
+      props.tagsAssigned ?? props.tags !== undefined,
     );
   }
 
@@ -118,8 +121,13 @@ export class Event {
     return [...this.tags];
   }
 
+  areTagsAssigned(): boolean {
+    return this.tagsDefined;
+  }
+
   /**
    * Accepts Enrichment suggestions once. Subsequent calls leave tags unchanged.
+   * Safe under at-least-once worker delivery.
    */
   assignTags(tags: EventTag[]): EventTag[] {
     if (this.tagsDefined) {

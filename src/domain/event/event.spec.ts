@@ -58,6 +58,7 @@ describe('Event', () => {
     });
 
     expect(event.getTags()).toEqual([]);
+    expect(event.areTagsAssigned()).toBe(false);
   });
 
   it('assigns enrichment tags once', () => {
@@ -75,6 +76,7 @@ describe('Event', () => {
     expect(tags[0].getTag()).toBe('social media');
     expect(tags[0].getConfidence()).toBe(0.95);
     expect(event.getTags()).toEqual(tags);
+    expect(event.areTagsAssigned()).toBe(true);
   });
 
   it('does not reassign tags on subsequent calls', () => {

@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -9,6 +10,7 @@ import {
 import { EventOrmEntity } from './event.entity';
 
 @Entity('event_tags')
+@Index('UQ_event_tags_event_id_tag', ['eventId', 'tag'], { unique: true })
 export class EventTagOrmEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;

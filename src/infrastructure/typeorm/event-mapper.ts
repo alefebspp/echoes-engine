@@ -16,6 +16,7 @@ export class EventMapper {
       externalEventId: entity.externalEventId,
       createdAt: entity.createdAt,
       tags: (entity.tags ?? []).map((tag) => EventMapper.tagToDomain(tag)),
+      tagsAssigned: entity.tagsAssigned ?? false,
     });
   }
 
@@ -30,6 +31,7 @@ export class EventMapper {
     entity.metadata = event.getMetadata();
     entity.externalEventId = event.getExternalEventId();
     entity.createdAt = event.getCreatedAt();
+    entity.tagsAssigned = event.areTagsAssigned();
     entity.tags = event.getTags().map((tag) => EventMapper.tagToOrm(tag));
     return entity;
   }

@@ -30,7 +30,7 @@ Phase 3 already gave you the boundaries that make Phase 4 safe:
 | `EventTypeHandler` registry | Workers can reuse the same enrichment strategies |
 | Client ingest idempotency | Separate from **consumer** idempotency you will add now |
 
-**Not in the project yet:** Redis, BullMQ, outbox table, domain event types, workers, DLQ.
+**Implemented:** Redis + BullMQ, `outbox_messages`, `EventIngested`, outbox publisher, enrichment worker, DLQ, consumer idempotency. See [phase-4-concepts.md](./phase-4-concepts.md).
 
 ---
 
@@ -196,13 +196,13 @@ Check only when you can answer without opening the repo:
 
 Phase 4 is complete when:
 
-- [ ] Ingest responds without waiting for tagging
-- [ ] Outbox + worker survive broker restart (unpublished rows still publish)
-- [ ] Duplicate jobs do not duplicate tags
-- [ ] You can explain at-least-once vs exactly-once and why exactly-once is hard
-- [ ] Failures and (at least) queue/job errors are visible in logs
-- [ ] Automated test covers ingest → outbox → worker → tag created
-- [ ] ADR documents the async decision and supersedes sync tagging
+- [x] Ingest responds without waiting for tagging
+- [x] Outbox + worker survive broker restart (unpublished rows still publish)
+- [x] Duplicate jobs do not duplicate tags
+- [x] You can explain at-least-once vs exactly-once and why exactly-once is hard
+- [x] Failures and (at least) queue/job errors are visible in logs
+- [x] Automated test covers ingest → outbox → worker → tag created
+- [x] ADR documents the async decision and supersedes sync tagging
 
 ---
 

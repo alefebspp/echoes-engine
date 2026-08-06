@@ -25,9 +25,10 @@ O objetivo é evoluir uma aplicação real, partindo de um MVP simples até uma 
 
 ## Stack tecnológica
 
-- **Runtime:** Node.js + TypeScript
+- **Runtime:** Node.js + TypeScript (recomendado: Node 20+)
 - **Framework:** [NestJS](https://nestjs.com/)
 - **Persistência:** PostgreSQL com [TypeORM](https://typeorm.io/) (incluindo migrations)
+- **Fila / workers:** Redis + [BullMQ](https://docs.bullmq.io/) (outbox → enrichment)
 - **Autenticação:** JWT com Passport (estratégias JWT e Local) e hashing de senha com bcrypt
 - **Segurança:** rate limiting com `@nestjs/throttler` e validação com `class-validator`
 - **Testes:** Jest (unitários e end-to-end)
@@ -36,32 +37,106 @@ O objetivo é evoluir uma aplicação real, partindo de um MVP simples até uma 
 
 ### Pré-requisitos
 
-- Node.js
-- PostgreSQL
+- Node.js 20+ (22 recomendado)
 - npm
+- Docker (opcional, mas o caminho mais simples para Postgres + Redis)
 
-### Instalação
+### 1. Subir Postgres e Redis
+
+```bash
+docker compose up -d db redis
+```
+
+Isso sobe:
+
+| Serviço | Porta padrão |
+|---------|--------------|
+| PostgreSQL | `5432` |
+| Redis | `6379` |
+
+### 2. Instalação
 
 ```bash
 npm install
 ```
 
-### Variáveis de ambiente
-
-Crie um arquivo `.env` na raiz do projeto com as configurações necessárias (conexão com o banco de dados, segredos de JWT, etc.).
-
-### Executando a aplicação
+### 3. Variáveis de ambiente
 
 ```bash
-# desenvolvimento
-npm run start
+cp .env.example .env
+```
 
-# modo watch (recarrega ao salvar)
+Valores mínimos para desenvolvimento local (já cobertos pelo `.env.example`):
+
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
+DB_DATABASE=echoes
+
+JWT_SECRET=change-me-in-production
+
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+OUTBOX_PUBLISHER_ENABLED=true
+OUTBOX_BATCH_SIZE=50
+ENRICHMENT_JOB_ATTEMPTS=5
+```
+
+### 4. Migrations
+
+```bash
+npm run migration:run
+```
+
+### 5. Executar a API **com** o worker
+
+Na Phase 4, **um único processo Nest** sobe:
+
+1. HTTP API (`POST /api/v1/events`, auth, …)
+2. **Outbox publisher** (`OutboxPublisher`) — a cada ~2s lê `outbox_messages` não publicados e enfileira no BullMQ
+3. **Enrichment worker** (`EnrichmentProcessor`) — consome a fila `enrichment`, aplica tags de forma idempotente e envia falhas esgotadas para `enrichment-dlq`
+
+```bash
+# desenvolvimento (watch)
 npm run start:dev
 
-# produção
+# sem watch
+npm run start
+
+# produção (depois de npm run build)
 npm run start:prod
 ```
+
+Não é necessário um segundo terminal para o worker hoje: publisher + consumer sobem junto com `AppModule` → `EnrichmentQueueModule`.
+
+Fluxo esperado após um ingest:
+
+```text
+POST /api/v1/events
+  → grava events + outbox_messages (mesma TX)
+  → 201 accepted
+
+OutboxPublisher
+  → BullMQ job na fila "enrichment"
+
+EnrichmentProcessor
+  → EnrichEventTagsUseCase → tags no Postgres
+```
+
+Nos logs, procure por: `event.create.succeeded`, `outbox.published`, `enrichment.started`, `enrichment.completed` (e `queue.depth` periodicamente).
+
+#### Desligar o publisher (útil em debug)
+
+No `.env`:
+
+```env
+OUTBOX_PUBLISHER_ENABLED=false
+```
+
+A API continua aceitando eventos (outbox acumula). Sem publisher ativo, as tags **não** são processadas até você religar o publisher ou chamar `OutboxPublisher.publishPending()` (como nos testes e2e).
 
 ### Migrations do banco de dados
 
@@ -82,9 +157,15 @@ npm run migration:revert
 # testes unitários
 npm run test
 
-# testes end-to-end
+# testes end-to-end (precisam de Postgres + Redis rodando)
 npm run test:e2e
 
 # cobertura de testes
 npm run test:cov
 ```
+
+### Documentação relacionada
+
+- [docs/phase-4-concepts.md](./docs/phase-4-concepts.md) — conceitos da Phase 4 com exemplos de código
+- [docs/adr/0004-async-tagging-outbox.md](./docs/adr/0004-async-tagging-outbox.md) — decisão de tagging assíncrono + outbox
+- [docs/mvp-endpoints.md](./docs/mvp-endpoints.md) — contrato HTTP da extensão
