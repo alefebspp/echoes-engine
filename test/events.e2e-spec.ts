@@ -10,29 +10,7 @@ import { UserOrmEntity } from '../src/infrastructure/typeorm/entities/user.entit
 import { OutboxPublisher } from '../src/infrastructure/queue/outbox-publisher.service';
 import { EnrichEventTagsUseCase } from '../src/application/event/enrich-event-tags-use-case';
 import { createTestApp } from './create-test-app';
-
-async function waitFor(
-  assertion: () => Promise<void>,
-  timeoutMs = 10_000,
-  intervalMs = 200,
-): Promise<void> {
-  const started = Date.now();
-  let lastError: unknown;
-
-  while (Date.now() - started < timeoutMs) {
-    try {
-      await assertion();
-      return;
-    } catch (error) {
-      lastError = error;
-      await new Promise((resolve) => setTimeout(resolve, intervalMs));
-    }
-  }
-
-  throw lastError instanceof Error
-    ? lastError
-    : new Error('waitFor timed out');
-}
+import { waitFor } from './wait-for';
 
 describe('EventsController (e2e)', () => {
   let app: INestApplication<App>;

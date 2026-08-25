@@ -15,5 +15,8 @@ process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test-jwt-secret';
 process.env.REDIS_HOST = process.env.REDIS_HOST ?? 'localhost';
 process.env.REDIS_PORT = process.env.REDIS_PORT ?? '6379';
+// Force discrete local Redis vars for e2e (ignore Upstash REDIS_URL from .env).
+process.env.REDIS_URL = '';
+process.env.REDIS_TLS = 'false';
 process.env.OUTBOX_PUBLISHER_ENABLED =
   process.env.OUTBOX_PUBLISHER_ENABLED ?? 'true';
