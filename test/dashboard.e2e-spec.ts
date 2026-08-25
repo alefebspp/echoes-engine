@@ -4,8 +4,10 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { Repository } from 'typeorm';
 import { EventOrmEntity } from '../src/infrastructure/typeorm/entities/event.entity';
+import { OutboxMessageOrmEntity } from '../src/infrastructure/typeorm/entities/outbox-message.entity';
 import { UserOrmEntity } from '../src/infrastructure/typeorm/entities/user.entity';
 import { createTestApp } from './create-test-app';
+import { waitFor } from './wait-for';
 
 describe('DashboardController (e2e)', () => {
   let app: INestApplication<App>;
@@ -52,70 +54,95 @@ describe('DashboardController (e2e)', () => {
       .delete()
       .from(EventOrmEntity)
       .execute();
-    const usersRepository = app.get<Repository<UserOrmEntity>>(getRepositoryToken(UserOrmEntity));
-    await usersRepository.createQueryBuilder().delete().from(UserOrmEntity).execute();
+    const outboxRepository = app.get<Repository<OutboxMessageOrmEntity>>(
+      getRepositoryToken(OutboxMessageOrmEntity),
+    );
+    await outboxRepository
+      .createQueryBuilder()
+      .delete()
+      .from(OutboxMessageOrmEntity)
+      .execute();
+    const usersRepository = app.get<Repository<UserOrmEntity>>(
+      getRepositoryToken(UserOrmEntity),
+    );
+    await usersRepository
+      .createQueryBuilder()
+      .delete()
+      .from(UserOrmEntity)
+      .execute();
     await app.close();
   });
 
   describe('GET /api/v1/dashboard', () => {
-    it('returns dashboard stats for the authenticated user', async () => {
-      await request(app.getHttpServer())
-        .post('/api/v1/events')
-        .set('Authorization', `Bearer ${token}`)
-        .send(webVisitEvent)
-        .expect(201);
+    it(
+      'returns dashboard stats for the authenticated user',
+      async () => {
+        const createResponse = await request(app.getHttpServer())
+          .post('/api/v1/events')
+          .set('Authorization', `Bearer ${token}`)
+          .send(webVisitEvent)
+          .expect(201);
 
-      const response = await request(app.getHttpServer())
-        .get('/api/v1/dashboard')
-        .set('Authorization', `Bearer ${token}`)
-        .expect(200);
+        const eventId = createResponse.body.id as string;
+        const eventsRepository = app.get<Repository<EventOrmEntity>>(
+          getRepositoryToken(EventOrmEntity),
+        );
+        await waitFor(async () => {
+          const event = await eventsRepository.findOneByOrFail({ id: eventId });
+          expect(event.tagsAssigned).toBe(true);
+        });
 
-      expect(response.body).toMatchObject({
-        timezone: 'UTC',
-        periodDays: 30,
-        summary: {
-          totalEvents: 1,
-          eventsLast7Days: 1,
-          eventsLast30Days: 1,
-          activeDays: 1,
-          untaggedEvents: 0,
-        },
-        categoryBreakdown: [
-          expect.objectContaining({
-            tag: 'developer tools',
-            count: 1,
-            percentage: 100,
-          }),
-        ],
-        topDomains: [
-          expect.objectContaining({
-            domain: 'kafka.apache.org',
-            count: 1,
-          }),
-        ],
-        topBrowsers: [
-          expect.objectContaining({
-            browser: 'chrome',
-            count: 1,
-          }),
-        ],
-        eventsBySource: [
-          expect.objectContaining({
-            sourceCode: 'browser_extension',
-            count: 1,
-          }),
-        ],
-      });
-      expect(response.body.summary.firstTrackedAt).toEqual(
-        expect.any(String),
-      );
-      expect(response.body.summary.lastTrackedAt).toEqual(expect.any(String));
-      expect(response.body.eventsByDay).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ count: 1 }),
-        ]),
-      );
-    });
+        const response = await request(app.getHttpServer())
+          .get('/api/v1/dashboard')
+          .set('Authorization', `Bearer ${token}`)
+          .expect(200);
+
+        expect(response.body).toMatchObject({
+          timezone: 'UTC',
+          periodDays: 30,
+          summary: {
+            totalEvents: 1,
+            eventsLast7Days: 1,
+            eventsLast30Days: 1,
+            activeDays: 1,
+            untaggedEvents: 0,
+          },
+          categoryBreakdown: [
+            expect.objectContaining({
+              tag: 'developer tools',
+              count: 1,
+              percentage: 100,
+            }),
+          ],
+          topDomains: [
+            expect.objectContaining({
+              domain: 'kafka.apache.org',
+              count: 1,
+            }),
+          ],
+          topBrowsers: [
+            expect.objectContaining({
+              browser: 'chrome',
+              count: 1,
+            }),
+          ],
+          eventsBySource: [
+            expect.objectContaining({
+              sourceCode: 'browser_extension',
+              count: 1,
+            }),
+          ],
+        });
+        expect(response.body.summary.firstTrackedAt).toEqual(
+          expect.any(String),
+        );
+        expect(response.body.summary.lastTrackedAt).toEqual(expect.any(String));
+        expect(response.body.eventsByDay).toEqual(
+          expect.arrayContaining([expect.objectContaining({ count: 1 })]),
+        );
+      },
+      15_000,
+    );
 
     it('accepts a custom period via query string', async () => {
       const response = await request(app.getHttpServer())
