@@ -4,6 +4,10 @@ O **Echoes Engine** é uma plataforma de backend que funciona como um sistema de
 
 Seu objetivo é transformar eventos brutos vindos de múltiplas fontes — como extensões de navegador, aplicativos móveis e integrações de terceiros — em conhecimento estruturado que possa ser pesquisado, analisado e usado para gerar insights personalizados.
 
+## URL
+
+https://echoes-engine.onrender.com
+
 ## Visão geral
 
 O sistema segue uma **arquitetura orientada a eventos** (event-driven), na qual cada atividade (por exemplo, visitar um site, ouvir uma música, concluir uma tarefa ou editar um documento) é ingerida, normalizada, enriquecida e armazenada como uma linha do tempo de eventos significativos.
