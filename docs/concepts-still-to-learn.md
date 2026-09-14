@@ -40,13 +40,18 @@ Main concepts still to learn:
 
 ## Phase 6 — IA
 
-| Concept | One-liner |
-|---------|-----------|
-| **Semantic embeddings** | Text → dense vectors where meaning ≈ proximity |
-| **Vector similarity search** | Nearest neighbors (pgvector), scoped per user |
-| **RAG** | Retrieve → ground LLM → answer with citations |
-| **Hybrid retrieval** | Vectors + metadata filters (date, tag, domain) |
-| **Fallback / degradation** | Rules/snippets when embedding or LLM APIs fail |
+Teaching notes: **[phase-6-ia/](./phase-6-ia/)**
+
+| Concept | One-liner | Notes |
+|---------|-----------|-------|
+| **Semantic embeddings** | Text → dense vectors where meaning ≈ proximity | [01](./phase-6-ia/01-semantic-embeddings.md) |
+| **Vector similarity search** | Nearest neighbors (pgvector), scoped per user | [02](./phase-6-ia/02-vector-similarity-search.md) |
+| **RAG** | Retrieve → ground LLM → answer with citations | [03](./phase-6-ia/03-rag.md) |
+| **Hybrid retrieval** | Vectors + metadata filters (date, tag, domain) | [04](./phase-6-ia/04-hybrid-retrieval.md) |
+| **Fallback / degradation** | Rules/snippets when embedding or LLM APIs fail | [05](./phase-6-ia/05-fallback-degradation.md) |
+| **AI adapters + async pipeline** | Ports/adapters; embedding handler on `EventIngested` | [06](./phase-6-ia/06-ai-adapters-async-pipeline.md) |
+
+**Emerging (optional):** embedding cache, chunking, eval harness, prompt injection, cost — [07-emerging-topics.md](./phase-6-ia/07-emerging-topics.md).
 
 ---
 

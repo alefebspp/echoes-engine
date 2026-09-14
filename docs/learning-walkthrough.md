@@ -684,6 +684,8 @@ Move to Phase 6 when:
 
 ### Phase 6 — IA
 
+**Concept teaching notes:** [phase-6-ia/](./phase-6-ia/) — embeddings, pgvector, RAG, hybrid retrieval, fallbacks, async AI pipeline.
+
 **Business Goal**
 
 Move beyond rule-based URL tagging: semantic search over browsing history ("find pages similar to this"), and a Q&A interface grounded in the user's own data ("what did I read about messaging queues?").
@@ -943,6 +945,8 @@ These recur in every phase. Notice how they deepen:
 - [api-endpoints.md](./api-endpoints.md) — full API contract (`WEB_VISIT` / `APP_VISIT` metadata)
 - [phase-4-learn-and-implement.md](./phase-4-learn-and-implement.md) — Phase 4: what to learn & implement
 - [phase-4-concepts.md](./phase-4-concepts.md) — Phase 4 concepts explained with code examples
+- [phase-5-cqrs-read-models/](./phase-5-cqrs-read-models/) — Phase 5 concept teaching notes
+- [phase-6-ia/](./phase-6-ia/) — Phase 6 concept teaching notes (embeddings, RAG, pgvector)
 - [adr/0004-async-tagging-outbox.md](./adr/0004-async-tagging-outbox.md) — async tagging + outbox decision
 - [initial-sql.md](./initial-sql.md) — target PostgreSQL schema
 - [../README.md](../README.md) — project overview

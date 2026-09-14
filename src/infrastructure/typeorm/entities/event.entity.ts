@@ -16,6 +16,7 @@ import { UserOrmEntity } from './user.entity';
 @Index('UQ_events_user_id_external_event_id', ['userId', 'externalEventId'], {
   unique: true,
 })
+@Index('IDX_events_user_occurred_at_id', ['userId', 'occurredAt', 'id'])
 export class EventOrmEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;

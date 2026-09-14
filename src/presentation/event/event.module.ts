@@ -28,9 +28,11 @@ import { EventTagOrmEntity } from 'src/infrastructure/typeorm/entities/event-tag
 import { OutboxMessageOrmEntity } from 'src/infrastructure/typeorm/entities/outbox-message.entity';
 import { TypeOrmEventRepository } from 'src/infrastructure/typeorm/event-repository';
 import { EventController } from './event.controller';
+import { ReadModelsModule } from '../read-models/read-models.module';
 
 @Module({
   imports: [
+    ReadModelsModule,
     TypeOrmModule.forFeature([
       EventOrmEntity,
       EventSourceOrmEntity,
