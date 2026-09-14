@@ -14,6 +14,10 @@ export type DashboardSummary = {
 export type DashboardStats = {
   timezone: string;
   periodDays: number;
+  generatedAt: string;
+  consistency: {
+    note: string;
+  };
   summary: DashboardSummary;
   eventsByDay: Array<{ date: string; count: number }>;
   categoryBreakdown: Array<{ tag: string; count: number; percentage: number }>;

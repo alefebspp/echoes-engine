@@ -12,6 +12,7 @@ import { RequestContextStore } from './common/async-context/request-context.stor
 import { LoggerModule } from './common/logging/logger.module';
 import { AuthModule } from './presentation/auth/auth.module';
 import { DashboardModule } from './presentation/dashboard/dashboard.module';
+import { AnalyticsModule } from './presentation/analytics/analytics.module';
 import { EventModule } from './presentation/event/event.module';
 import { UserModule } from './presentation/user/user.module';
 import { EnrichmentQueueModule } from './infrastructure/queue/enrichment-queue.module';
@@ -52,6 +53,7 @@ import { EnrichmentQueueModule } from './infrastructure/queue/enrichment-queue.m
     EventModule,
     EnrichmentQueueModule,
     DashboardModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -100,6 +100,10 @@ describe('DashboardController (e2e)', () => {
         expect(response.body).toMatchObject({
           timezone: 'UTC',
           periodDays: 30,
+          generatedAt: expect.any(String),
+          consistency: expect.objectContaining({
+            note: expect.stringContaining('eventually consistent'),
+          }),
           summary: {
             totalEvents: 1,
             eventsLast7Days: 1,

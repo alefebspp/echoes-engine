@@ -20,3 +20,4 @@ process.env.REDIS_URL = '';
 process.env.REDIS_TLS = 'false';
 process.env.OUTBOX_PUBLISHER_ENABLED =
   process.env.OUTBOX_PUBLISHER_ENABLED ?? 'true';
+process.env.WEEKLY_STATS_REFRESH_ENABLED = 'false';

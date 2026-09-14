@@ -2,6 +2,8 @@ import { InjectQueue, Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullm
 import { Injectable } from '@nestjs/common';
 import { Job, Queue } from 'bullmq';
 import { EnrichEventTagsUseCase } from 'src/application/event/enrich-event-tags-use-case';
+import { UpdateEventIngestProjectionsUseCase } from 'src/application/projection/update-event-ingest-projections-use-case';
+import { UpdateTagStatsProjectionUseCase } from 'src/application/projection/update-tag-stats-projection-use-case';
 import { AppLogger } from 'src/common/logging/app-logger.service';
 import { structuredLog } from 'src/common/logging/structured-log';
 import {
@@ -18,6 +20,8 @@ import {
 export class EnrichmentProcessor extends WorkerHost {
   constructor(
     private readonly enrichEventTagsUseCase: EnrichEventTagsUseCase,
+    private readonly updateEventIngestProjectionsUseCase: UpdateEventIngestProjectionsUseCase,
+    private readonly updateTagStatsProjectionUseCase: UpdateTagStatsProjectionUseCase,
     @InjectQueue(ENRICHMENT_DLQ)
     private readonly deadLetterQueue: Queue<EnrichmentDeadLetterPayload>,
     private readonly logger: AppLogger,
@@ -50,12 +54,16 @@ export class EnrichmentProcessor extends WorkerHost {
       }),
     );
 
+    await this.updateEventIngestProjectionsUseCase.execute(eventId);
+
     const result = await this.enrichEventTagsUseCase.execute(eventId);
 
     if (result.status === 'not_found') {
       // Event missing after ingest is a poison case — fail so retries/DLQ apply.
       throw new Error(`Event ${eventId} not found for enrichment`);
     }
+
+    await this.updateTagStatsProjectionUseCase.execute(eventId);
 
     this.logger.log(
       structuredLog('enrichment.completed', {

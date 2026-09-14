@@ -2,7 +2,7 @@
 
 Study plan for **Phase 5 (Analytics)** of Echoes Engine: learn every concept from the walkthrough before (and while) you build dashboard read APIs.
 
-Companion: [learning-walkthrough.md — Phase 5](./learning-walkthrough.md#phase-5--analytics) · [concepts-still-to-learn.md](./concepts-still-to-learn.md) · [api-endpoints.md](./api-endpoints.md)
+Companion: [learning-walkthrough.md — Phase 5](./learning-walkthrough.md#phase-5--analytics) · [concepts-still-to-learn.md](./concepts-still-to-learn.md) · [api-endpoints.md](./api-endpoints.md) · **[phase-5-cqrs-read-models/](./phase-5-cqrs-read-models/)** (concept teaching notes)
 
 **Assumes:** Phase 4 concepts are known and ideally implemented (`EventIngested` → outbox → workers). Read models hang off that same event stream.
 
@@ -14,18 +14,18 @@ Companion: [learning-walkthrough.md — Phase 5](./learning-walkthrough.md#phase
 
 ## What you must learn (checklist)
 
-| # | Concept | Walkthrough role |
-|---|---------|------------------|
-| 1 | **CQRS** | Separate write (commands) vs read (queries) paths |
-| 2 | **Read models / projections** | Denormalized tables updated by `EventIngested` handlers |
-| 3 | **Eventual consistency (read side)** | Dashboard may lag writes/tags; document staleness |
-| 4 | **Cursor-based pagination** | Stable paging (`occurred_at + id`) vs offset |
-| 5 | **Index design for query patterns** | `user_id + occurred_at DESC`, GIN on metadata |
-| 6 | **Materialized views** | Scheduled/on-demand snapshots for heavy aggregations |
-| 7 | **Query handlers / query objects** | Reads that never mutate state |
-| 8 | **Table vs MV judgment** | App-maintained projections first; MVs when SQL aggregations hurt |
+| # | Concept | Walkthrough role | Status |
+|---|---------|------------------|--------|
+| 1 | **CQRS** | Separate write (commands) vs read (queries) paths | ✅ → [notes](./phase-5-cqrs-read-models/01-cqrs.md) |
+| 2 | **Read models / projections** | Denormalized tables updated by `EventIngested` handlers | ✅ → [notes](./phase-5-cqrs-read-models/02-read-models-projections.md) |
+| 3 | **Eventual consistency (read side)** | Dashboard may lag writes/tags; document staleness | ✅ → [notes](./phase-5-cqrs-read-models/03-eventual-consistency.md) |
+| 4 | **Cursor-based pagination** | Stable paging (`occurred_at + id`) vs offset | ⬜ → [notes](./phase-5-cqrs-read-models/05-cursor-pagination.md) |
+| 5 | **Index design for query patterns** | `user_id + occurred_at DESC`, GIN on metadata | ⬜ → [notes](./phase-5-cqrs-read-models/06-index-design.md) |
+| 6 | **Materialized views** | Scheduled/on-demand snapshots for heavy aggregations | ⬜ → [notes](./phase-5-cqrs-read-models/07-materialized-views.md) |
+| 7 | **Query handlers / query objects** | Reads that never mutate state | ⬜ → [notes](./phase-5-cqrs-read-models/04-query-handlers.md) |
+| 8 | **Table vs MV judgment** | App-maintained projections first; MVs when SQL aggregations hurt | ⬜ → [notes](./phase-5-cqrs-read-models/08-table-vs-mv-judgment.md) |
 
-**Emerging (Week 4 optional depth):** cache-aside, data retention, export API, recursive CTEs as a Neo4j warm-up.
+**Emerging (Week 4 optional depth):** cache-aside, data retention, export API, recursive CTEs as a Neo4j warm-up — [09-emerging-topics.md](./phase-5-cqrs-read-models/09-emerging-topics.md).
 
 ---
 
@@ -303,6 +303,7 @@ Move toward Phase 6 when:
 
 ## Related docs
 
+- [phase-5-cqrs-read-models/](./phase-5-cqrs-read-models/) — teaching notes (CQRS through MVs + emerging)
 - [learning-walkthrough.md](./learning-walkthrough.md) — full Phase 5 section
 - [concepts-still-to-learn.md](./concepts-still-to-learn.md) — Phase 5 concept table
 - [phase-4-learn-and-implement.md](./phase-4-learn-and-implement.md) — prerequisite async stream
