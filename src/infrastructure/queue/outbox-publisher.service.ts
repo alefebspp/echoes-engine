@@ -9,6 +9,11 @@ import { EventIngested } from 'src/domain/domain-event/event-ingested';
 import type { OutboxStore } from 'src/domain/outbox/outbox-publisher-port';
 import { OUTBOX_STORE } from 'src/infrastructure/nest/injection-tokens';
 import {
+  EMBEDDING_QUEUE,
+  GENERATE_EMBEDDING_JOB,
+  type GenerateEmbeddingJobPayload,
+} from './embedding-queue.constants';
+import {
   ENRICHMENT_QUEUE,
   ENRICH_EVENT_JOB,
   type EnrichEventJobPayload,
@@ -28,6 +33,8 @@ export class OutboxPublisher implements OnModuleDestroy {
     },
     @InjectQueue(ENRICHMENT_QUEUE)
     private readonly enrichmentQueue: Queue<EnrichEventJobPayload>,
+    @InjectQueue(EMBEDDING_QUEUE)
+    private readonly embeddingQueue: Queue<GenerateEmbeddingJobPayload>,
     private readonly configService: ConfigService,
     private readonly logger: AppLogger,
   ) {
@@ -116,6 +123,20 @@ export class OutboxPublisher implements OnModuleDestroy {
           removeOnFail: false,
         });
 
+        await this.embeddingQueue.add(GENERATE_EMBEDDING_JOB, jobPayload, {
+          jobId: `embed-outbox-${message.getId()}`,
+          attempts: parseInt(
+            this.configService.get<string>('EMBEDDING_JOB_ATTEMPTS', '5'),
+            10,
+          ),
+          backoff: {
+            type: 'exponential',
+            delay: 1000,
+          },
+          removeOnComplete: 1000,
+          removeOnFail: false,
+        });
+
         publishedIds.push(message.getId());
         publishedCount += 1;
 
@@ -124,7 +145,7 @@ export class OutboxPublisher implements OnModuleDestroy {
             outboxMessageId: message.getId(),
             eventId: jobPayload.eventId,
             correlationId: jobPayload.correlationId,
-            queue: ENRICHMENT_QUEUE,
+            queues: [ENRICHMENT_QUEUE, EMBEDDING_QUEUE],
           }),
         );
       }
@@ -150,22 +171,41 @@ export class OutboxPublisher implements OnModuleDestroy {
 
   private async logQueueDepth(): Promise<void> {
     try {
-      const [waiting, active, delayed, failed] = await Promise.all([
-        this.enrichmentQueue.getWaitingCount(),
-        this.enrichmentQueue.getActiveCount(),
-        this.enrichmentQueue.getDelayedCount(),
-        this.enrichmentQueue.getFailedCount(),
-      ]);
       const unpublished =
         (await this.outboxStore.countUnpublished?.()) ?? undefined;
+
+      const [enrichment, embedding] = await Promise.all([
+        Promise.all([
+          this.enrichmentQueue.getWaitingCount(),
+          this.enrichmentQueue.getActiveCount(),
+          this.enrichmentQueue.getDelayedCount(),
+          this.enrichmentQueue.getFailedCount(),
+        ]),
+        Promise.all([
+          this.embeddingQueue.getWaitingCount(),
+          this.embeddingQueue.getActiveCount(),
+          this.embeddingQueue.getDelayedCount(),
+          this.embeddingQueue.getFailedCount(),
+        ]),
+      ]);
 
       this.logger.log(
         structuredLog('queue.depth', {
           queue: ENRICHMENT_QUEUE,
-          waiting,
-          active,
-          delayed,
-          failed,
+          waiting: enrichment[0],
+          active: enrichment[1],
+          delayed: enrichment[2],
+          failed: enrichment[3],
+          outboxUnpublished: unpublished ?? null,
+        }),
+      );
+      this.logger.log(
+        structuredLog('queue.depth', {
+          queue: EMBEDDING_QUEUE,
+          waiting: embedding[0],
+          active: embedding[1],
+          delayed: embedding[2],
+          failed: embedding[3],
           outboxUnpublished: unpublished ?? null,
         }),
       );

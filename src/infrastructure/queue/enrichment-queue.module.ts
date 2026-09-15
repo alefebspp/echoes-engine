@@ -11,8 +11,14 @@ import {
   EVENT_REPOSITORY,
   PROJECTION_STORE,
 } from 'src/infrastructure/nest/injection-tokens';
+import { AiModule } from 'src/presentation/ai/ai.module';
 import { EventModule } from 'src/presentation/event/event.module';
 import { ReadModelsModule } from 'src/presentation/read-models/read-models.module';
+import {
+  EMBEDDING_DLQ,
+  EMBEDDING_QUEUE,
+} from './embedding-queue.constants';
+import { EmbeddingProcessor } from './embedding.processor';
 import {
   ENRICHMENT_DLQ,
   ENRICHMENT_QUEUE,
@@ -26,6 +32,7 @@ import { buildRedisConnection } from './redis-connection.config';
   imports: [
     ScheduleModule.forRoot(),
     EventModule,
+    AiModule,
     ReadModelsModule,
     BullModule.forRootAsync({
       imports: [ConfigModule],
@@ -48,11 +55,18 @@ import { buildRedisConnection } from './redis-connection.config';
       {
         name: ENRICHMENT_DLQ,
       },
+      {
+        name: EMBEDDING_QUEUE,
+      },
+      {
+        name: EMBEDDING_DLQ,
+      },
     ),
   ],
   providers: [
     OutboxPublisher,
     EnrichmentProcessor,
+    EmbeddingProcessor,
     WeeklyStatsRefreshService,
     {
       provide: UpdateEventIngestProjectionsUseCase,

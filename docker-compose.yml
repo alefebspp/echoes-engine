@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
@@ -43,6 +43,10 @@ services:
       JWT_SECRET: dev-jwt-secret
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      # Optional: set OPENAI_API_KEY for real embeddings/RAG (fakes used when empty)
+      OPENAI_EMBEDDING_MODEL: text-embedding-3-small
+      OPENAI_LLM_MODEL: gpt-4o-mini
+      EMBEDDING_JOB_ATTEMPTS: 5
     depends_on:
       db:
         condition: service_healthy

@@ -16,6 +16,7 @@ import { AnalyticsModule } from './presentation/analytics/analytics.module';
 import { EventModule } from './presentation/event/event.module';
 import { UserModule } from './presentation/user/user.module';
 import { EnrichmentQueueModule } from './infrastructure/queue/enrichment-queue.module';
+import { AiModule } from './presentation/ai/ai.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { EnrichmentQueueModule } from './infrastructure/queue/enrichment-queue.m
     UserModule,
     AuthModule,
     EventModule,
+    AiModule,
     EnrichmentQueueModule,
     DashboardModule,
     AnalyticsModule,

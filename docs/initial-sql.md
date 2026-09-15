@@ -105,6 +105,35 @@ ON event_tags(tag);
 CREATE UNIQUE INDEX UQ_event_tags_event_id_tag
 ON event_tags(event_id, tag);
 
+CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE TABLE event_embeddings (
+    event_id UUID PRIMARY KEY,
+    user_id UUID NOT NULL,
+    embedding vector(1536) NOT NULL,
+    model VARCHAR(100) NOT NULL,
+    dimensions INT NOT NULL,
+    content_hash VARCHAR(64) NOT NULL,
+    embedded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_event_embeddings_event
+        FOREIGN KEY (event_id)
+        REFERENCES events(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_event_embeddings_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+);
+
+CREATE INDEX IDX_event_embeddings_user
+ON event_embeddings(user_id);
+
+CREATE INDEX IDX_event_embeddings_hnsw
+ON event_embeddings
+USING hnsw (embedding vector_cosine_ops);
+
 CREATE TABLE outbox_messages (
     id UUID PRIMARY KEY,
     type VARCHAR(100) NOT NULL,

@@ -21,3 +21,6 @@ process.env.REDIS_TLS = 'false';
 process.env.OUTBOX_PUBLISHER_ENABLED =
   process.env.OUTBOX_PUBLISHER_ENABLED ?? 'true';
 process.env.WEEKLY_STATS_REFRESH_ENABLED = 'false';
+process.env.OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
+process.env.RAG_SIMILARITY_THRESHOLD =
+  process.env.RAG_SIMILARITY_THRESHOLD ?? '0.05';
