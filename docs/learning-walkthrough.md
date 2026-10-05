@@ -947,6 +947,9 @@ These recur in every phase. Notice how they deepen:
 - [phase-4-concepts.md](./phase-4-concepts.md) — Phase 4 concepts explained with code examples
 - [phase-5-cqrs-read-models/](./phase-5-cqrs-read-models/) — Phase 5 concept teaching notes
 - [phase-6-ia/](./phase-6-ia/) — Phase 6 concept teaching notes (embeddings, RAG, pgvector)
+- [concepts-still-to-learn.md](./concepts-still-to-learn.md) — remaining roadmap concepts
+- [career-next-steps.md](./career-next-steps.md) — beyond the repo: market gaps, career skills, 6–12 month order
+- [cloud-roadmap.md](./cloud-roadmap.md) — AWS-first cloud path for job offers (Echoes as lab)
 - [adr/0004-async-tagging-outbox.md](./adr/0004-async-tagging-outbox.md) — async tagging + outbox decision
 - [initial-sql.md](./initial-sql.md) — target PostgreSQL schema
 - [../README.md](../README.md) — project overview

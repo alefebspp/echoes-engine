@@ -75,7 +75,7 @@ export class AskQuestionUseCase {
       tags: input.tags,
     };
 
-    const embedded = await this.embeddingPort.embed(question);
+    const embedded = await this.embeddingPort.embed(question, 'query');
     const hits = await this.eventEmbeddingStore.findSimilarByVector({
       userId: input.userId,
       vector: embedded.vector,

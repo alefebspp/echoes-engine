@@ -79,7 +79,7 @@ export class GenerateEmbeddingUseCase {
       return { eventId, status: 'skipped', model: existing.model };
     }
 
-    const embedded = await this.embeddingPort.embed(text);
+    const embedded = await this.embeddingPort.embed(text, 'document');
 
     await this.eventEmbeddingStore.upsert({
       eventId,

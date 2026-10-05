@@ -27,6 +27,7 @@
     "migration:run": "npm run typeorm -- migration:run",
     "migration:revert": "npm run typeorm -- migration:revert",
     "migration:show": "npm run typeorm -- migration:show",
+    "seed:rag": "TS_NODE_PROJECT=tsconfig.seed.json ts-node -r tsconfig-paths/register --transpile-only src/infrastructure/seed/seed-rag.ts",
     "deploy:staging": "npx wrangler deploy --env staging",
     "deploy:production": "npx wrangler deploy --env production"
   },

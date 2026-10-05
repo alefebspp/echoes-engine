@@ -11,10 +11,13 @@ import type { EventRepository } from 'src/domain/event/event-repository';
 import type { EmbeddingPort } from 'src/domain/ports/embedding-port';
 import type { EventEmbeddingStore } from 'src/domain/ports/event-embedding-store';
 import type { LLMPort } from 'src/domain/ports/llm-port';
+import { GeminiEmbeddingAdapter } from 'src/infrastructure/ai/gemini-embedding.adapter';
+import { GeminiLlmAdapter } from 'src/infrastructure/ai/gemini-llm.adapter';
 import { OpenAiEmbeddingAdapter } from 'src/infrastructure/ai/openai-embedding.adapter';
 import { OpenAiLlmAdapter } from 'src/infrastructure/ai/openai-llm.adapter';
 import { FakeEmbeddingAdapter } from 'src/infrastructure/ai/fake-embedding.adapter';
 import { FakeLlmAdapter } from 'src/infrastructure/ai/fake-llm.adapter';
+import { resolveAiProvider } from 'src/infrastructure/ai/resolve-ai-provider';
 import {
   EMBEDDING_PORT,
   EVENT_EMBEDDING_STORE,
@@ -32,37 +35,55 @@ import { SimilarEventsController } from './similar-events.controller';
   providers: [
     OpenAiEmbeddingAdapter,
     OpenAiLlmAdapter,
+    GeminiEmbeddingAdapter,
+    GeminiLlmAdapter,
     TypeOrmEventEmbeddingStore,
     {
       provide: EMBEDDING_PORT,
       useFactory: (
         configService: ConfigService,
         openAi: OpenAiEmbeddingAdapter,
+        gemini: GeminiEmbeddingAdapter,
       ): EmbeddingPort => {
-        const apiKey = configService.get<string>('OPENAI_API_KEY') ?? '';
-        if (!apiKey) {
-          return new FakeEmbeddingAdapter(
-            configService.get<string>('OPENAI_EMBEDDING_MODEL') ??
-              'fake-embedding-test',
-          );
+        const provider = resolveAiProvider({
+          AI_PROVIDER: configService.get<string>('AI_PROVIDER'),
+          GEMINI_API_KEY: configService.get<string>('GEMINI_API_KEY'),
+          OPENAI_API_KEY: configService.get<string>('OPENAI_API_KEY'),
+        });
+        if (provider === 'gemini') {
+          return gemini;
         }
-        return openAi;
+        if (provider === 'openai') {
+          return openAi;
+        }
+        return new FakeEmbeddingAdapter(
+          configService.get<string>('OPENAI_EMBEDDING_MODEL') ??
+            'fake-embedding-test',
+        );
       },
-      inject: [ConfigService, OpenAiEmbeddingAdapter],
+      inject: [ConfigService, OpenAiEmbeddingAdapter, GeminiEmbeddingAdapter],
     },
     {
       provide: LLM_PORT,
       useFactory: (
         configService: ConfigService,
         openAi: OpenAiLlmAdapter,
+        gemini: GeminiLlmAdapter,
       ): LLMPort => {
-        const apiKey = configService.get<string>('OPENAI_API_KEY') ?? '';
-        if (!apiKey) {
-          return new FakeLlmAdapter();
+        const provider = resolveAiProvider({
+          AI_PROVIDER: configService.get<string>('AI_PROVIDER'),
+          GEMINI_API_KEY: configService.get<string>('GEMINI_API_KEY'),
+          OPENAI_API_KEY: configService.get<string>('OPENAI_API_KEY'),
+        });
+        if (provider === 'gemini') {
+          return gemini;
         }
-        return openAi;
+        if (provider === 'openai') {
+          return openAi;
+        }
+        return new FakeLlmAdapter();
       },
-      inject: [ConfigService, OpenAiLlmAdapter],
+      inject: [ConfigService, OpenAiLlmAdapter, GeminiLlmAdapter],
     },
     {
       provide: EVENT_EMBEDDING_STORE,

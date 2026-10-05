@@ -43,7 +43,11 @@ services:
       JWT_SECRET: dev-jwt-secret
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      # Optional: set OPENAI_API_KEY for real embeddings/RAG (fakes used when empty)
+      # Optional real models. Fakes are used when no provider key is set.
+      # AI_PROVIDER: gemini
+      # GEMINI_API_KEY: set-me
+      # GEMINI_EMBEDDING_MODEL: gemini-embedding-2
+      # GEMINI_LLM_MODEL: gemini-3.8-flash
       OPENAI_EMBEDDING_MODEL: text-embedding-3-small
       OPENAI_LLM_MODEL: gpt-4o-mini
       EMBEDDING_JOB_ATTEMPTS: 5

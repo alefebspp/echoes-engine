@@ -3,7 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventSourceOrmEntity } from '../typeorm/entities/event-source.entity';
 
-const DEFAULT_EVENT_SOURCES: Pick<EventSourceOrmEntity, 'code' | 'name'>[] = [
+export const DEFAULT_EVENT_SOURCES: Pick<
+  EventSourceOrmEntity,
+  'code' | 'name'
+>[] = [
   { code: 'browser_extension', name: 'Browser Extension' },
   { code: 'mobile_sdk', name: 'Mobile SDK' },
   { code: 'github_connector', name: 'GitHub Connector' },
