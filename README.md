@@ -53,10 +53,10 @@ docker compose up -d db redis
 
 Isso sobe:
 
-| Serviço | Porta padrão |
-|---------|--------------|
-| PostgreSQL | `5432` |
-| Redis | `6379` |
+| Serviço    | Porta padrão |
+| ---------- | ------------ |
+| PostgreSQL | `5432`       |
+| Redis      | `6379`       |
 
 ### 2. Instalação
 
@@ -95,7 +95,25 @@ ENRICHMENT_JOB_ATTEMPTS=5
 npm run migration:run
 ```
 
-### 5. Executar a API **com** o worker
+### 5. Seed RAG (opcional)
+
+Para testar `POST /api/v1/ai/ask` e `GET /api/v1/events/:id/similar` sem criar eventos à mão:
+
+```bash
+npm run seed:rag
+```
+
+O script grava no Postgres local (as mesmas variáveis `DB_*` do `.env`):
+
+- usuário `rag@echoes.local` / senha `ragdemo1234`
+- 15 eventos com temas distintos (message queues, DDD, RAG, streaming, etc.)
+- tags e embeddings prontos — **não** depende do worker/outbox
+
+Pode rodar de novo: os eventos `rag-seed-*` desse usuário são recriados. O seed e a API precisam do mesmo provedor (`AI_PROVIDER` = `gemini`, `openai` ou vazio para o fake). Trocar o provedor ou o modelo exige rodar o seed outra vez.
+
+Detalhes e perguntas de exemplo: [docs/phase-6-ia/03-rag.md](./docs/phase-6-ia/03-rag.md#local-demo-seed).
+
+### 6. Executar a API **com** o worker
 
 Na Phase 4, **um único processo Nest** sobe:
 
@@ -173,3 +191,4 @@ npm run test:cov
 - [docs/phase-4-concepts.md](./docs/phase-4-concepts.md) — conceitos da Phase 4 com exemplos de código
 - [docs/adr/0004-async-tagging-outbox.md](./docs/adr/0004-async-tagging-outbox.md) — decisão de tagging assíncrono + outbox
 - [docs/mvp-endpoints.md](./docs/mvp-endpoints.md) — contrato HTTP da extensão
+- [docs/phase-6-ia/03-rag.md](./docs/phase-6-ia/03-rag.md) — RAG, seed local e perguntas de exemplo

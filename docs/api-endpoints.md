@@ -14,6 +14,9 @@ Reference for all HTTP endpoints exposed by the NestJS backend. All routes are p
 | `POST`   | `/auth/login`     | No                   | Authenticate and get JWT             |
 | `POST`   | `/auth/logout`    | No                   | Clear auth cookie                    |
 | `POST`   | `/events`         | JWT (Bearer/cookie)  | Submit a browsing event              |
+| `GET`    | `/events`         | JWT (Bearer/cookie)  | List events (cursor pagination)      |
+| `GET`    | `/events/:id/similar` | JWT (Bearer/cookie) | Semantically similar events      |
+| `POST`   | `/ai/ask`         | JWT (Bearer/cookie)  | RAG Q&A over the user's history      |
 | `GET`    | `/dashboard`      | JWT (Bearer/cookie)  | Dashboard stats for current user     |
 | `POST`   | `/users`          | No                   | Register a new user                  |
 | `GET`    | `/users`          | JWT (Bearer/cookie)  | List all users                       |
@@ -203,6 +206,78 @@ Typical source: `mobile_sdk`. Tags are derived from `metadata.appName`.
   "status": "accepted"
 }
 ```
+
+### `GET /api/v1/events/:id/similar`
+
+Return events semantically similar to `:id` for the authenticated user. Uses pgvector when an embedding exists; otherwise falls back to shared tags, then same domain, then an empty list with `mode: "semantic_index_not_ready"`.
+
+| Parameter      | Location | Required | Type     | Constraints | Default | Description |
+| -------------- | -------- | -------- | -------- | ----------- | ------- | ----------- |
+| Authentication | Header or Cookie | Yes | `string` | Bearer/cookie | — | JWT |
+| `id`           | Path     | Yes      | `string` | UUID | — | Reference event id |
+| `limit`        | Query    | No       | `number` | 1–50 | `10` | Max results |
+
+**Response:** `200`
+
+```json
+{
+  "eventId": "0a2dec5a-6914-4657-9c06-03c1fd26e1f1",
+  "mode": "vector",
+  "items": [
+    {
+      "eventId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "similarity": 0.82,
+      "occurredAt": "2026-06-13T15:30:00.000Z",
+      "type": "WEB_VISIT",
+      "metadata": { "url": "https://www.rabbitmq.com", "title": "RabbitMQ" },
+      "tags": ["developer tools"]
+    }
+  ]
+}
+```
+
+`mode` values: `vector` | `tags` | `domain` | `semantic_index_not_ready`.
+
+---
+
+## AI
+
+### `POST /api/v1/ai/ask`
+
+Retrieval-augmented Q&A over the authenticated user's events. Rate-limited to **10 requests per 60 seconds**.
+
+| Parameter      | Location | Required | Type     | Constraints | Description |
+| -------------- | -------- | -------- | -------- | ----------- | ----------- |
+| Authentication | Header or Cookie | Yes | `string` | Bearer/cookie | JWT |
+| `question`     | Body     | Yes      | `string` | 3–2000 chars | Natural-language question |
+| `from`         | Body     | No       | `string` | ISO-8601 | Filter retrieved events (inclusive) |
+| `to`           | Body     | No       | `string` | ISO-8601 | Filter retrieved events (inclusive) |
+| `tags`         | Body     | No       | `string[]` | max 20 | Require at least one matching tag |
+| `limit`        | Body     | No       | `number` | 1–20 | Max retrieved sources (default 8) |
+
+Empty filtered retrieval **refuses** — filters are never silently dropped.
+
+**Response:** `200`
+
+```json
+{
+  "answer": "You read about Apache Kafka [1].",
+  "citations": [
+    {
+      "eventId": "0a2dec5a-6914-4657-9c06-03c1fd26e1f1",
+      "title": "Apache Kafka",
+      "url": "https://kafka.apache.org",
+      "occurredAt": "2026-06-12T15:30:00.000Z"
+    }
+  ],
+  "snippets": [],
+  "retrievedCount": 1,
+  "refused": false,
+  "mode": "answer"
+}
+```
+
+`mode` values: `answer` | `refused` | `snippets_only` (LLM unavailable after successful retrieval).
 
 ---
 

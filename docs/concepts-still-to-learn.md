@@ -2,7 +2,7 @@
 
 Snapshot of what remains to study from [learning-walkthrough.md](./learning-walkthrough.md), given that Phase 4 theory is already covered (queues, Redis/BullMQ, outbox, retries, backpressure, DLQ, domain events, at-least-once vs exactly-once, idempotency).
 
-Companion: [phase-4-learn-and-implement.md](./phase-4-learn-and-implement.md)
+Companion: [phase-4-learn-and-implement.md](./phase-4-learn-and-implement.md) · Beyond the roadmap: [career-next-steps.md](./career-next-steps.md)
 
 ---
 
