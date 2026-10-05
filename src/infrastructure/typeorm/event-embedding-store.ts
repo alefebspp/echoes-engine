@@ -28,7 +28,18 @@ export class TypeOrmEventEmbeddingStore
   constructor(private readonly dataSource: DataSource) {}
 
   async onModuleInit(): Promise<void> {
-    await this.dataSource.query(`CREATE EXTENSION IF NOT EXISTS vector`);
+    try {
+      await this.dataSource.query(`CREATE EXTENSION IF NOT EXISTS vector`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes('extension "vector" is not available')) {
+        throw new Error(
+          'pgvector is not installed in this Postgres. Start the db service from this branch (`pgvector/pgvector:pg16`) with `docker compose up -d db`.',
+          { cause: error },
+        );
+      }
+      throw error;
+    }
     await this.dataSource.query(`
       CREATE TABLE IF NOT EXISTS event_embeddings (
         event_id uuid PRIMARY KEY REFERENCES events(id) ON DELETE CASCADE,
