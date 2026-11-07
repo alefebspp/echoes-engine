@@ -1,4 +1,5 @@
 import { Inject, MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { APP_FILTER } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -17,6 +18,7 @@ import { EventModule } from './presentation/event/event.module';
 import { UserModule } from './presentation/user/user.module';
 import { EnrichmentQueueModule } from './infrastructure/queue/enrichment-queue.module';
 import { AiModule } from './presentation/ai/ai.module';
+import { ApiExceptionFilter } from './infrastructure/nest/api-exception.filter';
 
 @Module({
   imports: [
@@ -58,7 +60,7 @@ import { AiModule } from './presentation/ai/ai.module';
     AnalyticsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_FILTER, useClass: ApiExceptionFilter }],
 })
 export class AppModule implements NestModule {
   constructor(

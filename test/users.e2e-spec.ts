@@ -51,13 +51,14 @@ describe('UsersController (e2e)', () => {
         });
     });
 
-    it('returns 400 when email is already registered', async () => {
+    it('returns 409 when email is already registered', async () => {
       await createUser().send(validUser).expect(201);
 
       return createUser()
         .send(validUser)
-        .expect(400)
+        .expect(409)
         .expect((res) => {
+          expect(res.body.code).toBe('USER_ALREADY_EXISTS');
           expect(res.body.message).toBe('Email already registered');
         });
     });
@@ -65,7 +66,16 @@ describe('UsersController (e2e)', () => {
     it('returns 400 for invalid payload', () => {
       return createUser()
         .send({ email: 'not-an-email', password: 'short' })
-        .expect(400);
+        .expect(400)
+        .expect((res) => {
+          expect(res.body.code).toBe('VALIDATION_FAILED');
+          expect(res.body.details).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({ field: 'email' }),
+              expect.objectContaining({ field: 'password' }),
+            ]),
+          );
+        });
     });
   });
 
@@ -90,8 +100,6 @@ describe('UsersController (e2e)', () => {
           request(server).get(url).set('Authorization', `Bearer ${token}`),
         patch: (url: string) =>
           request(server).patch(url).set('Authorization', `Bearer ${token}`),
-        delete: (url: string) =>
-          request(server).delete(url).set('Authorization', `Bearer ${token}`),
       };
     }
 
@@ -157,7 +165,10 @@ describe('UsersController (e2e)', () => {
       it('returns 404 when user does not exist', () => {
         return authenticated()
           .get('/api/v1/users/550e8400-e29b-41d4-a716-446655440099')
-          .expect(404);
+          .expect(404)
+          .expect((res) => {
+            expect(res.body.code).toBe('USER_NOT_FOUND');
+          });
       });
     });
 
@@ -172,20 +183,6 @@ describe('UsersController (e2e)', () => {
             expect(res.body.surname).toBe('Smith');
             expect(res.body.email).toBe('janet@example.com');
           });
-      });
-    });
-
-    describe('DELETE /api/v1/users/:id', () => {
-      it('removes a user', async () => {
-        await authenticated().delete(`/api/v1/users/${userId}`).expect(200);
-
-        return authenticated().get(`/api/v1/users/${userId}`).expect(404);
-      });
-
-      it('returns 404 when user does not exist', () => {
-        return authenticated()
-          .delete('/api/v1/users/550e8400-e29b-41d4-a716-446655440099')
-          .expect(404);
       });
     });
   });

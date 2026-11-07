@@ -1,8 +1,7 @@
-import { Body, Controller, Post, Res, UseFilters, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Res, UseGuards } from '@nestjs/common';
 import { seconds, Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { CookieOptions, Response } from 'express';
 import { LoginUseCase } from 'src/application/auth/login-use-case';
-import { DomainExceptionFilter } from 'src/infrastructure/nest/domain-exception.filter';
 import { AUTH_COOKIE_NAME, JWT_COOKIE_MAX_AGE_MS } from './auth.constants';
 import { LoginDto } from './dto/login.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
@@ -23,7 +22,6 @@ function authCookieOptions(maxAge?: number): CookieOptions {
 }
 
 @Controller('auth')
-@UseFilters(DomainExceptionFilter)
 export class AuthController {
   constructor(private readonly loginUseCase: LoginUseCase) {}
 

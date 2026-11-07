@@ -116,7 +116,6 @@ The token is returned by `POST /auth/login`. Store it client-side for the MVP. P
 | `GET` | `/users` | Bearer JWT | User management screen |
 | `GET` | `/users/:id` | Bearer JWT | Profile/details screen |
 | `PATCH` | `/users/:id` | Bearer JWT | Edit profile/user |
-| `DELETE` | `/users/:id` | Bearer JWT | Delete user |
 
 ### Login
 

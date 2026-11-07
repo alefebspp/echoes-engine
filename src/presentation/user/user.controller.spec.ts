@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CreateUserUseCase } from 'src/application/user/create-user-use-case';
-import { DeleteUserUseCase } from 'src/application/user/delete-user-use-case';
 import { GetUserByIdUseCase } from 'src/application/user/get-user-by-id-use-case';
 import { ListUsersUseCase } from 'src/application/user/list-users-use-case';
 import { UpdateUserUseCase } from 'src/application/user/update-user-use-case';
@@ -16,7 +15,6 @@ describe('UserController', () => {
   let listUsersUseCase: jest.Mocked<Pick<ListUsersUseCase, 'execute'>>;
   let getUserByIdUseCase: jest.Mocked<Pick<GetUserByIdUseCase, 'execute'>>;
   let updateUserUseCase: jest.Mocked<Pick<UpdateUserUseCase, 'execute'>>;
-  let deleteUserUseCase: jest.Mocked<Pick<DeleteUserUseCase, 'execute'>>;
 
   const user = User.reconstitute({
     id: '550e8400-e29b-41d4-a716-446655440000',
@@ -42,7 +40,6 @@ describe('UserController', () => {
     listUsersUseCase = { execute: jest.fn() };
     getUserByIdUseCase = { execute: jest.fn() };
     updateUserUseCase = { execute: jest.fn() };
-    deleteUserUseCase = { execute: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UserController],
@@ -51,7 +48,6 @@ describe('UserController', () => {
         { provide: ListUsersUseCase, useValue: listUsersUseCase },
         { provide: GetUserByIdUseCase, useValue: getUserByIdUseCase },
         { provide: UpdateUserUseCase, useValue: updateUserUseCase },
-        { provide: DeleteUserUseCase, useValue: deleteUserUseCase },
       ],
     }).compile();
 
@@ -115,17 +111,6 @@ describe('UserController', () => {
     expect(updateUserUseCase.execute).toHaveBeenCalledWith(
       user.getId().toString(),
       updateUserDto,
-    );
-  });
-
-  it('remove delegates to DeleteUserUseCase', async () => {
-    deleteUserUseCase.execute.mockResolvedValue(undefined);
-
-    await expect(
-      controller.remove(user.getId().toString()),
-    ).resolves.toBeUndefined();
-    expect(deleteUserUseCase.execute).toHaveBeenCalledWith(
-      user.getId().toString(),
     );
   });
 });

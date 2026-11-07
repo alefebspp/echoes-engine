@@ -6,12 +6,11 @@ import {
   ParseUUIDPipe,
   Query,
   Req,
-  UseFilters,
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { ErrorCode } from 'src/common/errors/error-code';
 import { FindSimilarEventsUseCase } from 'src/application/ai/find-similar-events-use-case';
-import { DomainExceptionFilter } from 'src/infrastructure/nest/domain-exception.filter';
 import { JwtAuthGuard } from 'src/presentation/auth/guards/jwt-auth.guard';
 import { AuthenticatedUser } from 'src/presentation/auth/strategies/jwt.strategy';
 import { SimilarEventsQueryDto } from 'src/presentation/event/dto/similar-events-query.dto';
@@ -19,7 +18,6 @@ import { SimilarEventsQueryDto } from 'src/presentation/event/dto/similar-events
 type AuthenticatedRequest = Request & { user: AuthenticatedUser };
 
 @Controller('events')
-@UseFilters(DomainExceptionFilter)
 export class SimilarEventsController {
   constructor(
     private readonly findSimilarEventsUseCase: FindSimilarEventsUseCase,
@@ -39,7 +37,10 @@ export class SimilarEventsController {
     });
 
     if (!result) {
-      throw new NotFoundException('Event not found');
+      throw new NotFoundException({
+        code: ErrorCode.EVENT_NOT_FOUND,
+        message: 'Event not found',
+      });
     }
 
     return result;
