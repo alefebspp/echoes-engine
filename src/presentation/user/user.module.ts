@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CreateUserUseCase } from 'src/application/user/create-user-use-case';
-import { DeleteUserUseCase } from 'src/application/user/delete-user-use-case';
 import { GetUserByIdUseCase } from 'src/application/user/get-user-by-id-use-case';
 import { ListUsersUseCase } from 'src/application/user/list-users-use-case';
 import { UpdateUserUseCase } from 'src/application/user/update-user-use-case';
@@ -55,12 +54,6 @@ import { UserController } from './user.controller';
         passwordHasher: PasswordHasher,
       ) => new UpdateUserUseCase(userRepository, passwordHasher),
       inject: [USER_REPOSITORY, PASSWORD_HASHER],
-    },
-    {
-      provide: DeleteUserUseCase,
-      useFactory: (userRepository: UserRepository) =>
-        new DeleteUserUseCase(userRepository),
-      inject: [USER_REPOSITORY],
     },
   ],
   exports: [USER_REPOSITORY, PASSWORD_HASHER],

@@ -23,7 +23,6 @@ Reference for all HTTP endpoints exposed by the NestJS backend. All routes are p
 | `GET`    | `/users/me`       | JWT (Bearer/cookie)  | Get current authenticated user       |
 | `GET`    | `/users/:id`      | JWT (Bearer/cookie)  | Get user by ID                       |
 | `PATCH`  | `/users/:id`      | JWT (Bearer/cookie)  | Update user by ID                    |
-| `DELETE` | `/users/:id`      | JWT (Bearer/cookie)  | Delete user by ID                    |
 
 ---
 
@@ -103,7 +102,7 @@ Set-Cookie: access_token=<token>; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800
 
 In production, the `Secure` attribute is also set.
 
-**Errors:** `401` — `{ "error": "Invalid credentials" }`
+**Errors:** `401` `INVALID_CREDENTIALS`, `429` `RATE_LIMITED` (5 attempts per minute)
 
 ---
 
@@ -403,26 +402,68 @@ Partially update a user. All body fields are optional; at least one should be se
 
 ---
 
-### `DELETE /api/v1/users/:id`
+## Errors
 
-Delete a user by ID.
+Every error response has the same shape:
 
-| Parameter      | Location | Required | Type     | Constraints                         | Description    |
-| -------------- | -------- | -------- | -------- | ----------------------------------- | -------------- |
-| Authentication | Header or Cookie | Yes | `string` | Bearer token or `access_token` cookie | JWT from login |
-| `id`           | Path     | Yes      | `string` | UUID                                | User ID        |
+```json
+{
+  "statusCode": 409,
+  "code": "USER_ALREADY_EXISTS",
+  "message": "Email already registered"
+}
+```
 
-**Response:** `204` — no content.
+- `code` is stable and machine-readable — clients should branch on it and translate it.
+- `message` is an English fallback for logs and debugging (a `string[]` for validation errors).
+- `details` is only present on `VALIDATION_FAILED`.
 
----
+Codes are defined in [`src/common/errors/error-code.ts`](../src/common/errors/error-code.ts). Never rename or reuse one; add a new code instead.
 
-## Validation
+| Code | Status | When |
+| ---- | ------ | ---- |
+| `VALIDATION_FAILED` | 400 | Request body/query failed DTO validation |
+| `BAD_REQUEST` | 400 | Other malformed requests |
+| `UNAUTHORIZED` | 401 | Missing or invalid JWT |
+| `INVALID_CREDENTIALS` | 401 | Wrong email or password on login |
+| `FORBIDDEN` | 403 | Authenticated but not allowed |
+| `NOT_FOUND` | 404 | Unknown route or resource |
+| `USER_NOT_FOUND` | 404 | No user with that id |
+| `EVENT_NOT_FOUND` | 404 | No event with that id for the current user |
+| `EVENT_SOURCE_NOT_FOUND` | 404 | Unknown event `source` |
+| `CONFLICT` | 409 | Generic conflict |
+| `USER_ALREADY_EXISTS` | 409 | Email already registered |
+| `DUPLICATE_EXTERNAL_EVENT` | 409 | Event with this external id already exists |
+| `INVALID_EMAIL` | 400 | Email rejected by the domain |
+| `INVALID_PASSWORD` | 400 | Password rejected by the domain |
+| `INVALID_EVENT_TYPE` | 400 | Unknown event `type` |
+| `INVALID_EVENT_TAG` | 400 | Event tag failed domain rules |
+| `UNSUPPORTED_EVENT_TYPE` | 400 | No handler for this event type |
+| `INVALID_CURSOR` | 400 | Pagination cursor could not be decoded |
+| `RATE_LIMITED` | 429 | Too many requests (login, `/ai/ask`) |
+| `UNABLE_TO_STORE_EVENT` | 500 | Event could not be persisted |
+| `INTERNAL_ERROR` | 500 | Anything unexpected (message is never leaked) |
+
+### Validation
 
 The API uses a global `ValidationPipe` with:
 
 - `whitelist: true` — unknown properties are stripped
 - `forbidNonWhitelisted: true` — unknown properties cause `400`
 - `transform: true` — query/body values are coerced to DTO types
+
+Validation failures list each rejected field and the class-validator rules it broke:
+
+```json
+{
+  "statusCode": 400,
+  "code": "VALIDATION_FAILED",
+  "message": ["question must be shorter than or equal to 2000 characters"],
+  "details": [{ "field": "question", "rules": ["maxLength"] }]
+}
+```
+
+Nested fields use dotted paths (`metadata.url`); unknown properties report the rule `whitelistValidation`.
 
 ---
 

@@ -158,7 +158,12 @@ describe('DashboardController (e2e)', () => {
     });
 
     it('returns 401 without a bearer token', () => {
-      return request(app.getHttpServer()).get('/api/v1/dashboard').expect(401);
+      return request(app.getHttpServer())
+        .get('/api/v1/dashboard')
+        .expect(401)
+        .expect((res) => {
+          expect(res.body.code).toBe('UNAUTHORIZED');
+        });
     });
 
     it('returns 400 for an invalid period', () => {

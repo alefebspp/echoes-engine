@@ -65,7 +65,8 @@ describe('AuthController (e2e)', () => {
         .send({ email: validUser.email, password: 'wrong-password' })
         .expect(401)
         .expect((res) => {
-          expect(res.body.error).toBe('Invalid credentials');
+          expect(res.body.code).toBe('INVALID_CREDENTIALS');
+          expect(res.body.message).toBe('Invalid credentials');
         });
     });
   });

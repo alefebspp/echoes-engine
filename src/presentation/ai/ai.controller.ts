@@ -5,13 +5,11 @@ import {
   HttpStatus,
   Post,
   Req,
-  UseFilters,
   UseGuards,
 } from '@nestjs/common';
 import { seconds, Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { Request } from 'express';
 import { AskQuestionUseCase } from 'src/application/ai/ask-question-use-case';
-import { DomainExceptionFilter } from 'src/infrastructure/nest/domain-exception.filter';
 import { JwtAuthGuard } from 'src/presentation/auth/guards/jwt-auth.guard';
 import { AuthenticatedUser } from 'src/presentation/auth/strategies/jwt.strategy';
 import { AskQuestionDto } from './dto/ask-question.dto';
@@ -19,7 +17,6 @@ import { AskQuestionDto } from './dto/ask-question.dto';
 type AuthenticatedRequest = Request & { user: AuthenticatedUser };
 
 @Controller('ai')
-@UseFilters(DomainExceptionFilter)
 export class AiController {
   constructor(private readonly askQuestionUseCase: AskQuestionUseCase) {}
 

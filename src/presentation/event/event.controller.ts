@@ -1,24 +1,18 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Get,
   Post,
   Query,
   Req,
-  UseFilters,
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { ListEventsQueryHandler } from 'src/application/queries/list-events-query-handler';
 import { SubmitEventUseCase } from 'src/application/event/submit-event-use-case';
-import {
-  decodeEventCursor,
-  InvalidEventCursorException,
-} from 'src/infrastructure/common/event-cursor';
+import { decodeEventCursor } from 'src/infrastructure/common/event-cursor';
 import { JwtAuthGuard } from 'src/presentation/auth/guards/jwt-auth.guard';
 import { AuthenticatedUser } from 'src/presentation/auth/strategies/jwt.strategy';
-import { DomainExceptionFilter } from 'src/infrastructure/nest/domain-exception.filter';
 import { ListEventsQueryDto } from './dto/list-events-query.dto';
 import { SubmitEventDto } from './dto/submit-event.dto';
 import { SubmitEventResponseDto } from './dto/submit-event-response.dto';
@@ -26,7 +20,6 @@ import { SubmitEventResponseDto } from './dto/submit-event-response.dto';
 type AuthenticatedRequest = Request & { user: AuthenticatedUser };
 
 @Controller('events')
-@UseFilters(DomainExceptionFilter)
 export class EventController {
   constructor(
     private readonly submitEventUseCase: SubmitEventUseCase,
@@ -60,18 +53,12 @@ export class EventController {
   ) {
     let cursor: { occurredAt: Date; id: string } | undefined;
     if (query.cursor) {
-      try {
-        const decoded = decodeEventCursor(query.cursor);
-        cursor = {
-          occurredAt: new Date(decoded.occurredAt),
-          id: decoded.id,
-        };
-      } catch (error) {
-        if (error instanceof InvalidEventCursorException) {
-          throw new BadRequestException('Invalid cursor');
-        }
-        throw error;
-      }
+      // An undecodable cursor throws InvalidEventCursorException → 400 INVALID_CURSOR.
+      const decoded = decodeEventCursor(query.cursor);
+      cursor = {
+        occurredAt: new Date(decoded.occurredAt),
+        id: decoded.id,
+      };
     }
 
     return this.listEventsQueryHandler.execute({

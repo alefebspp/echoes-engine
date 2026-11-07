@@ -1,25 +1,21 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
   Req,
-  UseFilters,
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { CreateUserUseCase } from 'src/application/user/create-user-use-case';
-import { DeleteUserUseCase } from 'src/application/user/delete-user-use-case';
 import { GetUserByIdUseCase } from 'src/application/user/get-user-by-id-use-case';
 import { ListUsersUseCase } from 'src/application/user/list-users-use-case';
 import { UpdateUserUseCase } from 'src/application/user/update-user-use-case';
 import { JwtAuthGuard } from 'src/presentation/auth/guards/jwt-auth.guard';
 import { AuthenticatedUser } from 'src/presentation/auth/strategies/jwt.strategy';
-import { DomainExceptionFilter } from 'src/infrastructure/nest/domain-exception.filter';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
@@ -27,14 +23,12 @@ import { UserResponseDto } from './dto/user-response.dto';
 type AuthenticatedRequest = Request & { user: AuthenticatedUser };
 
 @Controller('users')
-@UseFilters(DomainExceptionFilter)
 export class UserController {
   constructor(
     private readonly createUserUseCase: CreateUserUseCase,
     private readonly listUsersUseCase: ListUsersUseCase,
     private readonly getUserByIdUseCase: GetUserByIdUseCase,
     private readonly updateUserUseCase: UpdateUserUseCase,
-    private readonly deleteUserUseCase: DeleteUserUseCase,
   ) {}
 
   @Post()
@@ -76,11 +70,5 @@ export class UserController {
   ): Promise<UserResponseDto> {
     const user = await this.updateUserUseCase.execute(id, updateUserDto);
     return UserResponseDto.fromDomain(user);
-  }
-
-  @Delete(':id')
-  @UseGuards(JwtAuthGuard)
-  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    await this.deleteUserUseCase.execute(id);
   }
 }

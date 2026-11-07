@@ -1,9 +1,14 @@
+import { ErrorCode } from 'src/common/errors/error-code';
+import { DomainError } from 'src/domain/exceptions/domain-error';
+
 export type EventCursorPayload = {
   occurredAt: string;
   id: string;
 };
 
-export class InvalidEventCursorException extends Error {
+export class InvalidEventCursorException extends DomainError {
+  readonly code = ErrorCode.INVALID_CURSOR;
+
   constructor() {
     super('Invalid cursor');
     this.name = 'InvalidEventCursorException';
